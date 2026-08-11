@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Roll the Bones — Dice Tray</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt: #1B3A2F;
+    --felt-dark: #0D1F19;
+    --felt-light: #234A3B;
+    --brass: #C9A356;
+    --brass-dark: #8C6B32;
+    --brass-bright: #E8C77A;
+    --parchment: #EFE3C8;
+    --parchment-dim: #D8C79E;
+    --ink: #1C1712;
+    --crit-gold: #E8B93E;
+    --fail-red: #A5453A;
+    --display: 'Cinzel', serif;
+    --body: 'Crimson Pro', serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: radial-gradient(ellipse at 50% -10%, #2a1810 0%, transparent 60%), var(--ink);
+    color: var(--parchment);
+    font-family: var(--body);
+  }
+
+  body { display: flex; justify-content: center; padding: 48px 20px 80px; }
+
+  .stage { width: 100%; max-width: 920px; display: flex; flex-direction: column; align-items: center; }
+
+  header { text-align: center; margin-bottom: 28px; }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.32em;
+    text-transform: uppercase; color: var(--brass); margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: var(--display); font-weight: 700; font-size: clamp(34px, 6vw, 56px);
+    letter-spacing: 0.04em; margin: 0; color: var(--parchment);
+    text-shadow: 0 2px 0 rgba(0,0,0,0.4);
+  }
+  h1 span { color: var(--brass-bright); }
+
+  .dice-select { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 30px; }
+
+  .die-btn {
+    font-family: var(--mono); font-weight: 600; font-size: 14px; color: var(--parchment-dim);
+    background: linear-gradient(180deg, #2a2018, #1a140f); border: 1px solid var(--brass-dark);
+    border-radius: 10px; padding: 10px 16px; cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .die-btn:hover { transform: translateY(-2px); border-color: var(--brass); color: var(--parchment); }
+  .die-btn:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+  .die-btn.active {
+    color: var(--ink); background: linear-gradient(180deg, var(--brass-bright), var(--brass-dark));
+    border-color: var(--brass-bright); box-shadow: 0 0 18px rgba(232,199,122,0.35);
+  }
+
+  .tray-wrap { position: relative; width: min(100%, 460px); aspect-ratio: 1 / 1; }
+
+  .tray-rim {
+    position: absolute; inset: 0; border-radius: 50%; padding: 22px;
+    background: conic-gradient(from 180deg, #8c6b32, #e8c77a, #8c6b32, #5e461f, #8c6b32, #e8c77a, #8c6b32);
+    box-shadow: 0 24px 50px -14px rgba(0,0,0,0.65), inset 0 0 0 2px rgba(255,255,255,0.08);
+    cursor: pointer; transition: box-shadow 0.4s ease;
+  }
+  .tray-rim:focus-visible { outline: 3px solid var(--brass-bright); outline-offset: 4px; }
+
+  .tray-felt {
+    position: relative; width: 100%; height: 100%; border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 40%, var(--felt-light) 0%, var(--felt) 55%, var(--felt-dark) 100%);
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.6), inset 0 0 90px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .tray-wrap.crit .tray-rim { box-shadow: 0 24px 50px -14px rgba(0,0,0,0.65), 0 0 60px 6px rgba(232,185,62,0.55); }
+  .tray-wrap.fail .tray-rim { box-shadow: 0 24px 50px -14px rgba(0,0,0,0.65), 0 0 60px 6px rgba(165,69,58,0.55); }
+
+  #dieHolder { width: 58%; filter: drop-shadow(0 14px 18px rgba(0,0,0,0.5)); }
+  #dieHolder svg { width: 100%; height: 100%; display: block; }
+
+  #dieHolder.rolling { animation: tumble 0.85s cubic-bezier(.25,.8,.35,1); }
+  @keyframes tumble {
+    0%   { transform: rotate(0deg) scale(1); }
+    15%  { transform: rotate(140deg) scale(0.88); }
+    35%  { transform: rotate(330deg) scale(1.05); }
+    55%  { transform: rotate(510deg) scale(0.92); }
+    75%  { transform: rotate(660deg) scale(1.04); }
+    100% { transform: rotate(720deg) scale(1); }
+  }
+
+  .status {
+    margin: 22px 0 6px; min-height: 22px; text-align: center;
+    font-family: var(--mono); font-size: 14px; color: var(--parchment-dim);
+  }
+  .status.crit { color: var(--crit-gold); font-weight: 600; }
+  .status.fail { color: var(--fail-red); font-weight: 600; }
+
+  .ledger {
+    width: min(100%, 560px); margin-top: 20px; background: linear-gradient(180deg, #2a2018, #1c1610);
+    border: 1px solid var(--brass-dark); border-radius: 12px; padding: 18px 22px;
+  }
+  .ledger h2 {
+    font-family: var(--display); font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--brass); margin: 0 0 10px; border-bottom: 1px solid var(--brass-dark); padding-bottom: 8px;
+  }
+  #log { list-style: none; margin: 0; padding: 0; max-height: 170px; overflow-y: auto; font-family: var(--mono); font-size: 13px; }
+  #log li { display: flex; justify-content: space-between; padding: 6px 2px; border-bottom: 1px dashed rgba(201,163,86,0.2); color: var(--parchment-dim); }
+  #log li:last-child { border-bottom: none; }
+  #log li .val { color: var(--parchment); font-weight: 600; }
+  #log li.crit .val { color: var(--crit-gold); }
+  #log li.fail .val { color: var(--fail-red); }
+  #log .empty { text-align: center; padding: 14px 0; opacity: 0.6; font-style: italic; font-family: var(--body); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .die-btn, .tray-rim, #dieHolder.rolling { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <header>
+    <p class="eyebrow">The Gaming Table</p>
+    <h1>Roll the <span>Bones</span></h1>
+  </header>
+
+  <div class="dice-select" id="diceSelect" role="tablist" aria-label="Choose a die"></div>
+
+  <div class="tray-wrap" id="trayWrap">
+    <div class="tray-rim" id="tray" role="button" tabindex="0" aria-label="Roll the die">
+      <div class="tray-felt">
+        <div id="dieHolder"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="status" id="status" aria-live="polite">Click the tray, or press Enter / Space, to roll</p>
+
+  <div class="ledger">
+    <h2>Roll Log</h2>
+    <ul id="log"><li class="empty">No rolls yet — give it a throw.</li></ul>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   ROLL THE BONES — 2D dice tray
+   Every die (d4, d6, d8, d10, d12, d20, d%) is a hand-drawn SVG polygon
+   shaped like its real-world silhouette, with the value drawn on its face
+   (pips for the d6, numerals for the rest). Rolling flickers through
+   random faces of the current die, then settles on the true result.
+   ========================================================================= */
+
+const NS = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS(NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+
+function polygonPoints(sides, radius, rotateDeg, cx = 60, cy = 64) {
+  const pts = [];
+  const rot = (rotateDeg * Math.PI) / 180;
+  for (let i = 0; i < sides; i++) {
+    const a = rot + (i * 2 * Math.PI) / sides;
+    pts.push([cx + radius * Math.sin(a), cy - radius * Math.cos(a)]);
+  }
+  return pts.map(p => p.join(',')).join(' ');
+}
+
+// ---- pip layout for the d6 face ----
+function pipGroup(value, cx, cy, spread) {
+  const layout = {
+    1: [4], 2: [0, 8], 3: [0, 4, 8],
+    4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]
+  }[value] || [];
+  const g = svgEl('g', {});
+  layout.forEach(i => {
+    const row = Math.floor(i / 3) - 1, col = (i % 3) - 1;
+    const c = svgEl('circle', {
+      cx: cx + col * spread, cy: cy + row * spread, r: 6.5, fill: '#1C1712'
+    });
+    g.appendChild(c);
+  });
+  return g;
+}
+
+// ---- one shape + color spec per die type ----
+const SHAPES = {
+  d4:  { sides: 3, radius: 56, rot: 0,   fill: '#A5453A', stroke: '#E8C77A', text: '#EFE3C8', numY: 92 },
+  d6:  { sides: 4, radius: 58, rot: 45,  fill: '#EFE3C8', stroke: '#8C6B32', text: null,      rounded: true },
+  d8:  { sides: 4, radius: 58, rot: 0,   fill: '#2F6B4F', stroke: '#E8C77A', text: '#EFE3C8', numY: 64 },
+  d10: { sides: 5, radius: 58, rot: 180, fill: '#C9A356', stroke: '#5e461f', text: '#1C1712', numY: 68 },
+  d12: { sides: 5, radius: 58, rot: 0,   fill: '#5B3E8C', stroke: '#E8C77A', text: '#EFE3C8', numY: 68 },
+  d20: { sides: 6, radius: 58, rot: 0,   fill: '#E8B93E', stroke: '#8C6B32', text: '#1C1712', numY: 64 },
+  d100:{ sides: 5, radius: 58, rot: 180, fill: '#B4894A', stroke: '#5e461f', text: '#1C1712', numY: 68 },
+};
+
+function renderFace(type, value, display) {
+  const spec = SHAPES[type];
+  const svg = svgEl('svg', { viewBox: '0 0 120 128' });
+
+  if (spec.rounded) {
+    svg.appendChild(svgEl('rect', {
+      x: 6, y: 10, width: 108, height: 108, rx: 18,
+      fill: spec.fill, stroke: spec.stroke, 'stroke-width': 4
+    }));
+    svg.appendChild(pipGroup(value, 60, 64, 20));
+  } else {
+    svg.appendChild(svgEl('polygon', {
+      points: polygonPoints(spec.sides, spec.radius, spec.rot),
+      fill: spec.fill, stroke: spec.stroke, 'stroke-width': 4, 'stroke-linejoin': 'round'
+    }));
+    const label = svgEl('text', {
+      x: 60, y: spec.numY, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: spec.text, 'font-family': "'Cinzel', serif", 'font-weight': '700',
+      'font-size': display.length > 2 ? 26 : 34
+    });
+    label.textContent = display;
+    svg.appendChild(label);
+  }
+  return svg;
+}
+
+const DICE_CONFIG = {
+  d4:  { label: 'd4',  results: range(1, 4) },
+  d6:  { label: 'd6',  results: range(1, 6) },
+  d8:  { label: 'd8',  results: range(1, 8) },
+  d10: { label: 'd10', results: range(1, 10) },
+  d12: { label: 'd12', results: range(1, 12) },
+  d20: { label: 'd20', results: range(1, 20), critical: true },
+  d100:{ label: 'd%',  results: range(0, 9).map(n => n * 10), suffix: '%' },
+};
+const DICE_ORDER = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+function range(a, b) { const out = []; for (let i = a; i <= b; i++) out.push(i); return out; }
+
+const holder = document.getElementById('dieHolder');
+const statusEl = document.getElementById('status');
+const trayWrap = document.getElementById('trayWrap');
+const tray = document.getElementById('tray');
+
+let currentType = 'd20';
+let rolling = false;
+
+function paintDie(type, value) {
+  const cfg = DICE_CONFIG[type];
+  const display = String(value) + (cfg.suffix || '');
+  holder.innerHTML = '';
+  holder.appendChild(renderFace(type, value, display));
+}
+
+function randomFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function mountDie(type) {
+  const cfg = DICE_CONFIG[type];
+  paintDie(type, randomFrom(cfg.results));
+}
+mountDie(currentType);
+
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function rollCurrentDie() {
+  if (rolling) return;
+  rolling = true;
+  trayWrap.classList.remove('crit', 'fail');
+  statusEl.classList.remove('crit', 'fail');
+  statusEl.textContent = 'Rolling…';
+
+  const cfg = DICE_CONFIG[currentType];
+  const finalValue = randomFrom(cfg.results);
+  const duration = reducedMotion ? 200 : 850;
+
+  holder.classList.remove('rolling');
+  void holder.offsetWidth; // restart animation
+  holder.classList.add('rolling');
+
+  const flicker = setInterval(() => paintDie(currentType, randomFrom(cfg.results)), 65);
+
+  setTimeout(() => {
+    clearInterval(flicker);
+    holder.classList.remove('rolling');
+    paintDie(currentType, finalValue);
+    finishRoll(finalValue, cfg);
+    rolling = false;
+  }, duration);
+}
+
+function finishRoll(value, cfg) {
+  const display = value + (cfg.suffix || '');
+  const isCrit = cfg.critical && value === Math.max(...cfg.results);
+  const isFail = cfg.critical && value === Math.min(...cfg.results);
+
+  statusEl.textContent = isCrit ? `Critical hit! ${cfg.label} → ${display}`
+                        : isFail ? `Fumble… ${cfg.label} → ${display}`
+                        : `${cfg.label} → ${display}`;
+  statusEl.classList.toggle('crit', isCrit);
+  statusEl.classList.toggle('fail', isFail);
+  trayWrap.classList.toggle('crit', isCrit);
+  trayWrap.classList.toggle('fail', isFail);
+
+  addLogEntry(cfg.label, display, isCrit, isFail);
+}
+
+function addLogEntry(label, display, isCrit, isFail) {
+  const log = document.getElementById('log');
+  const empty = log.querySelector('.empty');
+  if (empty) empty.remove();
+
+  const li = document.createElement('li');
+  if (isCrit) li.classList.add('crit');
+  if (isFail) li.classList.add('fail');
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  li.innerHTML = `<span>${label} · ${time}${isCrit ? ' · critical!' : ''}${isFail ? ' · fumble' : ''}</span><span class="val">${display}</span>`;
+  log.prepend(li);
+  while (log.children.length > 8) log.removeChild(log.lastChild);
+}
+
+// ---- dice type tabs ----
+const selectEl = document.getElementById('diceSelect');
+DICE_ORDER.forEach(type => {
+  const btn = document.createElement('button');
+  btn.className = 'die-btn' + (type === currentType ? ' active' : '');
+  btn.textContent = DICE_CONFIG[type].label;
+  btn.setAttribute('role', 'tab');
+  btn.setAttribute('aria-selected', type === currentType ? 'true' : 'false');
+  btn.addEventListener('click', () => {
+    if (rolling) return;
+    currentType = type;
+    mountDie(type);
+    statusEl.textContent = 'Click the tray, or press Enter / Space, to roll';
+    statusEl.classList.remove('crit', 'fail');
+    trayWrap.classList.remove('crit', 'fail');
+    [...selectEl.children].forEach(b => {
+      b.classList.toggle('active', b === btn);
+      b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+    });
+  });
+  selectEl.appendChild(btn);
+});
+
+tray.addEventListener('click', rollCurrentDie);
+tray.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rollCurrentDie(); }
+});
+</script>
+</body>
+</html>
