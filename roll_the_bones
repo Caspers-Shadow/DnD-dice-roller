@@ -8,21 +8,70 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
+  /* =======================================================================
+     THEMES
+     Each theme redefines the same set of semantic variables, so every
+     other rule in this file (tray, buttons, ledger, dice tabs) automatically
+     re-skins itself. Dice gem colors stay fixed on purpose — a real set of
+     dice doesn't change color with the room.
+     ======================================================================= */
   :root{
+    /* Emerald Table — dark, default */
+    --bg: #1C1712;
+    --bg-glow: #2a1810;
     --felt: #1B3A2F;
-    --felt-dark: #0D1F19;
     --felt-light: #234A3B;
-    --brass: #C9A356;
-    --brass-dark: #8C6B32;
-    --brass-bright: #E8C77A;
-    --parchment: #EFE3C8;
-    --parchment-dim: #D8C79E;
+    --felt-dark: #0D1F19;
+    --accent: #C9A356;
+    --accent-dark: #8C6B32;
+    --accent-bright: #E8C77A;
+    --text: #EFE3C8;
+    --text-dim: #B8A98A;
     --ink: #1C1712;
-    --crit-gold: #E8B93E;
-    --fail-red: #A5453A;
+    --panel-a: #2a2018;
+    --panel-b: #1a140f;
+    --crit: #E8B93E;
+    --fail: #C0584A;
+
     --display: 'Cinzel', serif;
     --body: 'Crimson Pro', serif;
     --mono: 'JetBrains Mono', monospace;
+  }
+
+  html[data-theme="dragon"]{
+    --bg: #170D0B; --bg-glow: #4a1a12;
+    --felt: #3B1414; --felt-light: #59211E; --felt-dark: #1C0808;
+    --accent: #E8B93E; --accent-dark: #8A5A1E; --accent-bright: #FBD98A;
+    --text: #F3DCC0; --text-dim: #C79A78;
+    --ink: #170D0B;
+    --panel-a: #2e1710; --panel-b: #1c0d08;
+  }
+
+  html[data-theme="moon"]{
+    --bg: #0E1220; --bg-glow: #2a3a66;
+    --felt: #16213A; --felt-light: #22314F; --felt-dark: #0A0F1A;
+    --accent: #B9C9EA; --accent-dark: #4B5C7A; --accent-bright: #E4ECFB;
+    --text: #E7EDFB; --text-dim: #93A3C4;
+    --ink: #0E1220;
+    --panel-a: #1a2033; --panel-b: #10141f;
+  }
+
+  html[data-theme="parchment"]{
+    --bg: #F3E9D2; --bg-glow: #e8caa0;
+    --felt: #B98255; --felt-light: #D3A272; --felt-dark: #8C5A34;
+    --accent: #C98F3E; --accent-dark: #8C5A1E; --accent-bright: #F0C987;
+    --text: #3B2A1A; --text-dim: #7A6142;
+    --ink: #241608;
+    --panel-a: #EADFC4; --panel-b: #DECBA3;
+  }
+
+  html[data-theme="frost"]{
+    --bg: #EAF2F8; --bg-glow: #bcdcf0;
+    --felt: #7FA8C9; --felt-light: #A8C8E0; --felt-dark: #4E7896;
+    --accent: #8FB3D6; --accent-dark: #5D7E97; --accent-bright: #F8FBFF;
+    --text: #16232E; --text-dim: #55697A;
+    --ink: #0F1820;
+    --panel-a: #DCE9F3; --panel-b: #C7DCEB;
   }
 
   * { box-sizing: border-box; }
@@ -30,102 +79,132 @@
   html, body {
     margin: 0;
     min-height: 100%;
-    background: radial-gradient(ellipse at 50% -10%, #2a1810 0%, transparent 60%), var(--ink);
-    color: var(--parchment);
+    color: var(--text);
     font-family: var(--body);
   }
 
-  body { display: flex; justify-content: center; padding: 48px 20px 80px; }
+  body {
+    display: flex;
+    justify-content: center;
+    padding: 44px 20px 80px;
+    background: radial-gradient(ellipse at 50% -10%, var(--bg-glow) 0%, transparent 60%), var(--bg);
+    transition: background-color 0.5s ease, color 0.5s ease;
+  }
 
   .stage { width: 100%; max-width: 920px; display: flex; flex-direction: column; align-items: center; }
 
-  header { text-align: center; margin-bottom: 28px; }
+  header { text-align: center; margin-bottom: 18px; }
 
   .eyebrow {
     font-family: var(--mono); font-size: 12px; letter-spacing: 0.32em;
-    text-transform: uppercase; color: var(--brass); margin: 0 0 10px;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 10px;
+    transition: color 0.5s ease;
   }
 
   h1 {
     font-family: var(--display); font-weight: 700; font-size: clamp(34px, 6vw, 56px);
-    letter-spacing: 0.04em; margin: 0; color: var(--parchment);
-    text-shadow: 0 2px 0 rgba(0,0,0,0.4);
+    letter-spacing: 0.04em; margin: 0; color: var(--text);
+    transition: color 0.5s ease;
   }
-  h1 span { color: var(--brass-bright); }
+  h1 span { color: var(--accent-bright); transition: color 0.5s ease; }
 
+  /* ---- theme swatches ---- */
+  .theme-select {
+    display: flex; gap: 10px; align-items: center; justify-content: center;
+    margin: 6px 0 28px; flex-wrap: wrap;
+  }
+  .theme-label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--text-dim); margin-right: 2px;
+  }
+  .theme-swatch {
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    border: 2px solid rgba(128,128,128,0.35);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    padding: 0;
+  }
+  .theme-swatch:hover { transform: translateY(-2px) scale(1.06); }
+  .theme-swatch:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
+  .theme-swatch.active { border-color: var(--accent-bright); box-shadow: 0 0 0 3px rgba(232,199,122,0.25), 0 2px 6px rgba(0,0,0,0.35); }
+
+  /* ---- dice type tabs ---- */
   .dice-select { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 30px; }
 
   .die-btn {
-    font-family: var(--mono); font-weight: 600; font-size: 14px; color: var(--parchment-dim);
-    background: linear-gradient(180deg, #2a2018, #1a140f); border: 1px solid var(--brass-dark);
+    font-family: var(--mono); font-weight: 600; font-size: 14px; color: var(--text-dim);
+    background: linear-gradient(180deg, var(--panel-a), var(--panel-b));
+    border: 1px solid var(--accent-dark);
     border-radius: 10px; padding: 10px 16px; cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+                box-shadow 0.15s ease, background-color 0.4s ease;
   }
-  .die-btn:hover { transform: translateY(-2px); border-color: var(--brass); color: var(--parchment); }
-  .die-btn:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+  .die-btn:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--text); }
+  .die-btn:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
   .die-btn.active {
-    color: var(--ink); background: linear-gradient(180deg, var(--brass-bright), var(--brass-dark));
-    border-color: var(--brass-bright); box-shadow: 0 0 18px rgba(232,199,122,0.35);
+    color: var(--ink); background: linear-gradient(180deg, var(--accent-bright), var(--accent-dark));
+    border-color: var(--accent-bright); box-shadow: 0 0 18px rgba(232,199,122,0.3);
   }
 
   .tray-wrap { position: relative; width: min(100%, 460px); aspect-ratio: 1 / 1; }
 
   .tray-rim {
     position: absolute; inset: 0; border-radius: 50%; padding: 22px;
-    background: conic-gradient(from 180deg, #8c6b32, #e8c77a, #8c6b32, #5e461f, #8c6b32, #e8c77a, #8c6b32);
-    box-shadow: 0 24px 50px -14px rgba(0,0,0,0.65), inset 0 0 0 2px rgba(255,255,255,0.08);
-    cursor: pointer; transition: box-shadow 0.4s ease;
+    background: conic-gradient(from 180deg,
+      var(--accent-dark), var(--accent-bright), var(--accent-dark),
+      var(--felt-dark), var(--accent-dark), var(--accent-bright), var(--accent-dark));
+    box-shadow: 0 24px 50px -14px rgba(0,0,0,0.55), inset 0 0 0 2px rgba(255,255,255,0.08);
+    cursor: pointer; transition: box-shadow 0.4s ease, background 0.5s ease;
   }
-  .tray-rim:focus-visible { outline: 3px solid var(--brass-bright); outline-offset: 4px; }
+  .tray-rim:focus-visible { outline: 3px solid var(--accent-bright); outline-offset: 4px; }
 
   .tray-felt {
     position: relative; width: 100%; height: 100%; border-radius: 50%;
     background: radial-gradient(ellipse at 50% 40%, var(--felt-light) 0%, var(--felt) 55%, var(--felt-dark) 100%);
-    box-shadow: inset 0 0 40px rgba(0,0,0,0.6), inset 0 0 90px rgba(0,0,0,0.5);
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.55), inset 0 0 90px rgba(0,0,0,0.45);
     display: flex; align-items: center; justify-content: center;
+    transition: background 0.5s ease;
   }
 
-  .tray-wrap.crit .tray-rim { box-shadow: 0 24px 50px -14px rgba(0,0,0,0.65), 0 0 60px 6px rgba(232,185,62,0.55); }
-  .tray-wrap.fail .tray-rim { box-shadow: 0 24px 50px -14px rgba(0,0,0,0.65), 0 0 60px 6px rgba(165,69,58,0.55); }
+  .tray-wrap.crit .tray-rim { box-shadow: 0 24px 50px -14px rgba(0,0,0,0.55), 0 0 60px 6px rgba(232,185,62,0.55); }
+  .tray-wrap.fail .tray-rim { box-shadow: 0 24px 50px -14px rgba(0,0,0,0.55), 0 0 60px 6px rgba(192,88,74,0.55); }
 
-  #dieHolder { width: 58%; filter: drop-shadow(0 14px 18px rgba(0,0,0,0.5)); }
+  #dieHolder {
+    width: 58%;
+    filter: drop-shadow(0 14px 18px rgba(0,0,0,0.5)) blur(0px);
+    transform: rotate(0deg) scale(1);
+    will-change: transform, filter;
+  }
   #dieHolder svg { width: 100%; height: 100%; display: block; }
-
-  #dieHolder.rolling { animation: tumble 0.85s cubic-bezier(.25,.8,.35,1); }
-  @keyframes tumble {
-    0%   { transform: rotate(0deg) scale(1); }
-    15%  { transform: rotate(140deg) scale(0.88); }
-    35%  { transform: rotate(330deg) scale(1.05); }
-    55%  { transform: rotate(510deg) scale(0.92); }
-    75%  { transform: rotate(660deg) scale(1.04); }
-    100% { transform: rotate(720deg) scale(1); }
-  }
 
   .status {
     margin: 22px 0 6px; min-height: 22px; text-align: center;
-    font-family: var(--mono); font-size: 14px; color: var(--parchment-dim);
+    font-family: var(--mono); font-size: 14px; color: var(--text-dim);
+    transition: color 0.3s ease;
   }
-  .status.crit { color: var(--crit-gold); font-weight: 600; }
-  .status.fail { color: var(--fail-red); font-weight: 600; }
+  .status.crit { color: var(--crit); font-weight: 600; }
+  .status.fail { color: var(--fail); font-weight: 600; }
 
   .ledger {
-    width: min(100%, 560px); margin-top: 20px; background: linear-gradient(180deg, #2a2018, #1c1610);
-    border: 1px solid var(--brass-dark); border-radius: 12px; padding: 18px 22px;
+    width: min(100%, 560px); margin-top: 20px;
+    background: linear-gradient(180deg, var(--panel-a), var(--panel-b));
+    border: 1px solid var(--accent-dark); border-radius: 12px; padding: 18px 22px;
+    transition: background 0.5s ease, border-color 0.5s ease;
   }
   .ledger h2 {
     font-family: var(--display); font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--brass); margin: 0 0 10px; border-bottom: 1px solid var(--brass-dark); padding-bottom: 8px;
+    color: var(--accent); margin: 0 0 10px; border-bottom: 1px solid var(--accent-dark); padding-bottom: 8px;
   }
   #log { list-style: none; margin: 0; padding: 0; max-height: 170px; overflow-y: auto; font-family: var(--mono); font-size: 13px; }
-  #log li { display: flex; justify-content: space-between; padding: 6px 2px; border-bottom: 1px dashed rgba(201,163,86,0.2); color: var(--parchment-dim); }
+  #log li { display: flex; justify-content: space-between; padding: 6px 2px; border-bottom: 1px dashed rgba(128,128,128,0.2); color: var(--text-dim); }
   #log li:last-child { border-bottom: none; }
-  #log li .val { color: var(--parchment); font-weight: 600; }
-  #log li.crit .val { color: var(--crit-gold); }
-  #log li.fail .val { color: var(--fail-red); }
+  #log li .val { color: var(--text); font-weight: 600; }
+  #log li.crit .val { color: var(--crit); }
+  #log li.fail .val { color: var(--fail); }
   #log .empty { text-align: center; padding: 14px 0; opacity: 0.6; font-style: italic; font-family: var(--body); }
 
   @media (prefers-reduced-motion: reduce) {
-    .die-btn, .tray-rim, #dieHolder.rolling { animation: none !important; transition: none !important; }
+    .die-btn, .theme-swatch { transition: none; }
   }
 </style>
 </head>
@@ -136,6 +215,10 @@
     <p class="eyebrow">The Gaming Table</p>
     <h1>Roll the <span>Bones</span></h1>
   </header>
+
+  <div class="theme-select" id="themeSelect" role="group" aria-label="Choose a table theme">
+    <span class="theme-label">Table</span>
+  </div>
 
   <div class="dice-select" id="diceSelect" role="tablist" aria-label="Choose a die"></div>
 
@@ -158,10 +241,6 @@
 <script>
 /* =========================================================================
    ROLL THE BONES — 2D dice tray
-   Every die (d4, d6, d8, d10, d12, d20, d%) is a hand-drawn SVG polygon
-   shaped like its real-world silhouette, with the value drawn on its face
-   (pips for the d6, numerals for the rest). Rolling flickers through
-   random faces of the current die, then settles on the true result.
    ========================================================================= */
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -182,7 +261,6 @@ function polygonPoints(sides, radius, rotateDeg, cx = 60, cy = 64) {
   return pts.map(p => p.join(',')).join(' ');
 }
 
-// ---- pip layout for the d6 face ----
 function pipGroup(value, cx, cy, spread) {
   const layout = {
     1: [4], 2: [0, 8], 3: [0, 4, 8],
@@ -191,15 +269,13 @@ function pipGroup(value, cx, cy, spread) {
   const g = svgEl('g', {});
   layout.forEach(i => {
     const row = Math.floor(i / 3) - 1, col = (i % 3) - 1;
-    const c = svgEl('circle', {
-      cx: cx + col * spread, cy: cy + row * spread, r: 6.5, fill: '#1C1712'
-    });
+    const c = svgEl('circle', { cx: cx + col * spread, cy: cy + row * spread, r: 6.5, fill: '#1C1712' });
     g.appendChild(c);
   });
   return g;
 }
 
-// ---- one shape + color spec per die type ----
+// Dice keep their own gem colors regardless of table theme.
 const SHAPES = {
   d4:  { sides: 3, radius: 56, rot: 0,   fill: '#A5453A', stroke: '#E8C77A', text: '#EFE3C8', numY: 92 },
   d6:  { sides: 4, radius: 58, rot: 45,  fill: '#EFE3C8', stroke: '#8C6B32', text: null,      rounded: true },
@@ -272,7 +348,13 @@ function mountDie(type) {
 mountDie(currentType);
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function easeOutQuint(x) { return 1 - Math.pow(1 - x, 5); }
 
+// ---------------------------------------------------------------------------
+// Rolling — a single rAF-driven pass handles rotation, wobble, motion blur
+// and face-flicker together so everything lands in the same instant instead
+// of two separate timers finishing slightly out of sync.
+// ---------------------------------------------------------------------------
 function rollCurrentDie() {
   if (rolling) return;
   rolling = true;
@@ -282,21 +364,56 @@ function rollCurrentDie() {
 
   const cfg = DICE_CONFIG[currentType];
   const finalValue = randomFrom(cfg.results);
-  const duration = reducedMotion ? 200 : 850;
 
-  holder.classList.remove('rolling');
-  void holder.offsetWidth; // restart animation
-  holder.classList.add('rolling');
-
-  const flicker = setInterval(() => paintDie(currentType, randomFrom(cfg.results)), 65);
-
-  setTimeout(() => {
-    clearInterval(flicker);
-    holder.classList.remove('rolling');
+  if (reducedMotion) {
     paintDie(currentType, finalValue);
     finishRoll(finalValue, cfg);
     rolling = false;
-  }, duration);
+    return;
+  }
+
+  const spins = 3 + Math.random();
+  const duration = 1000;
+  const start = performance.now();
+  let nextFlicker = start;
+  holder.style.transition = 'none';
+
+  function frame(now) {
+    const elapsed = now - start;
+    const p = Math.min(elapsed / duration, 1);
+    const eased = easeOutQuint(p);
+
+    const angle = spins * 360 * eased;
+    const wobble = Math.sin(p * Math.PI * 4) * 4 * (1 - p);
+    const scale = 1 + Math.sin(p * Math.PI) * 0.06;
+    holder.style.transform = `rotate(${angle + wobble}deg) scale(${scale})`;
+    const blur = Math.max(0, 1 - p) * 2.4;
+    holder.style.filter = `drop-shadow(0 14px 18px rgba(0,0,0,0.5)) blur(${blur}px)`;
+
+    if (now >= nextFlicker && p < 1) {
+      paintDie(currentType, randomFrom(cfg.results));
+      nextFlicker = now + 40 + eased * 150; // flicker slows as the die "settles"
+    }
+
+    if (p < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      settle();
+    }
+  }
+
+  function settle() {
+    paintDie(currentType, finalValue);
+    holder.style.transition = 'transform 0.34s cubic-bezier(.34,1.56,.64,1), filter 0.3s ease';
+    holder.style.transform = 'rotate(360deg) scale(1)';
+    holder.style.filter = 'drop-shadow(0 14px 18px rgba(0,0,0,0.5)) blur(0px)';
+    setTimeout(() => {
+      finishRoll(finalValue, cfg);
+      rolling = false;
+    }, 300);
+  }
+
+  requestAnimationFrame(frame);
 }
 
 function finishRoll(value, cfg) {
@@ -329,7 +446,9 @@ function addLogEntry(label, display, isCrit, isFail) {
   while (log.children.length > 8) log.removeChild(log.lastChild);
 }
 
-// ---- dice type tabs ----
+// ---------------------------------------------------------------------------
+// Dice type tabs
+// ---------------------------------------------------------------------------
 const selectEl = document.getElementById('diceSelect');
 DICE_ORDER.forEach(type => {
   const btn = document.createElement('button');
@@ -355,6 +474,41 @@ DICE_ORDER.forEach(type => {
 tray.addEventListener('click', rollCurrentDie);
 tray.addEventListener('keydown', e => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rollCurrentDie(); }
+});
+
+// ---------------------------------------------------------------------------
+// Table themes
+// ---------------------------------------------------------------------------
+const THEMES = [
+  { id: 'emerald',   name: 'Emerald Table',    swatch: ['#1B3A2F', '#E8C77A'] },
+  { id: 'dragon',    name: 'Dragonfire Hoard', swatch: ['#3B1414', '#FBD98A'] },
+  { id: 'moon',      name: 'Ninth Moon',       swatch: ['#16213A', '#E4ECFB'] },
+  { id: 'parchment', name: 'Sunlit Parchment', swatch: ['#D3A272', '#8C5A1E'] },
+  { id: 'frost',     name: 'Frostspire',       swatch: ['#A8C8E0', '#5D7E97'] },
+];
+
+const themeSelectEl = document.getElementById('themeSelect');
+const savedTheme = localStorage.getItem('rtb-theme');
+const initialTheme = THEMES.some(t => t.id === savedTheme) ? savedTheme : 'emerald';
+document.documentElement.setAttribute('data-theme', initialTheme);
+
+THEMES.forEach(theme => {
+  const btn = document.createElement('button');
+  btn.className = 'theme-swatch' + (theme.id === initialTheme ? ' active' : '');
+  btn.style.background = `linear-gradient(135deg, ${theme.swatch[0]}, ${theme.swatch[1]})`;
+  btn.title = theme.name;
+  btn.setAttribute('aria-label', theme.name);
+  btn.setAttribute('aria-pressed', theme.id === initialTheme ? 'true' : 'false');
+  btn.addEventListener('click', () => {
+    document.documentElement.setAttribute('data-theme', theme.id);
+    localStorage.setItem('rtb-theme', theme.id);
+    [...themeSelectEl.querySelectorAll('.theme-swatch')].forEach(b => {
+      const active = b === btn;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  });
+  themeSelectEl.appendChild(btn);
 });
 </script>
 </body>
