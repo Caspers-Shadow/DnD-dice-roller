@@ -1,4 +1,4 @@
-# 🎲 Roll the Bones
+# 🎲 The Faerie's Fortune
 
 A fantasy-themed 3D dice roller designed as a lightweight digital companion for tabletop role-playing games.
 
