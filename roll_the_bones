@@ -78,12 +78,17 @@
     position: relative; overflow-x: hidden;
   }
 
-  /* ---- ambience: fixed behind everything, re-themed on each switch ---- */
+  /* ---- ambience: fixed behind everything, rebuilt on each theme switch ---- */
   #ambience { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-  #ambience svg.landscape { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 26vh; min-height: 160px; }
+  .landscape-layer { position: absolute; left: -4%; right: -4%; bottom: 0; width: 108%; height: 28vh; min-height: 175px; }
+  .landscape-back { filter: blur(2.5px); opacity: 0.55; animation: driftSlow 46s ease-in-out infinite alternate; }
+  .landscape-front { animation: driftFast 30s ease-in-out infinite alternate; }
+  @keyframes driftSlow { 0% { transform: translateX(-1.4%); } 100% { transform: translateX(1.4%); } }
+  @keyframes driftFast { 0% { transform: translateX(-0.7%); } 100% { transform: translateX(0.7%); } }
 
   .particle { position: fixed; bottom: -4vh; left: 0; border-radius: 50%; background: var(--glow); box-shadow: 0 0 8px 2px var(--glow); opacity: 0; }
   .p-firefly, .p-mote, .p-ember { animation-name: floatUp; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+  .p-smoke { animation-name: floatUp; animation-timing-function: ease-in-out; animation-iteration-count: infinite; filter: blur(6px); }
   .p-snow { top: -4vh; bottom: auto; animation-name: fall; animation-timing-function: linear; animation-iteration-count: infinite; }
   .p-star { bottom: auto; animation-name: twinkle; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
 
@@ -261,10 +266,10 @@
 /* =========================================================================
    ROLL THE BONES — 3D dice tray
    -------------------------------------------------------------------------
-   The seven dice are placeholder Three.js geometry, styled like a matched
-   gemstone set (colors stay fixed across themes — a real dice set doesn't
-   change color with the room). The rolled value is chosen randomly and
-   shown on the brass placard below the tray; the spin dramatizes it.
+   Every die is placeholder Three.js geometry with real printed numerals on
+   every face (found by clustering triangles that share a normal, so it
+   works for any convex die shape without hand-mapped UVs). Colors stay
+   fixed across table themes — a real dice set doesn't change with the room.
 
    SWAPPING IN YOUR OWN BLENDER DICE
    ----------------------------------
@@ -274,10 +279,94 @@
       above, pointing at (cdnjs) three.js/r128/examples/js/loaders/GLTFLoader.js
    3. In DICE_CONFIG below, replace a die's `build` function to load and
       cache the .glb with THREE.GLTFLoader, then .clone() it on later rolls
-      so the file is only fetched once.
+      so the file is only fetched once. If your model already has numbers
+      sculpted or painted on, skip the addFaceNumbers() call for that die.
    ========================================================================= */
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------------------------------------------------------------------------
+// Face-numbering: works on any convex polyhedron by clustering triangles
+// that share a normal (one cluster = one real face), then stamping a small
+// unlit number plane at that face's centroid, parented so it spins with it.
+// ---------------------------------------------------------------------------
+function readTriangle(geometry, triIndex) {
+  const pos = geometry.attributes.position;
+  if (geometry.index) {
+    const idx = geometry.index.array;
+    const a = idx[triIndex * 3], b = idx[triIndex * 3 + 1], c = idx[triIndex * 3 + 2];
+    return [
+      new THREE.Vector3().fromBufferAttribute(pos, a),
+      new THREE.Vector3().fromBufferAttribute(pos, b),
+      new THREE.Vector3().fromBufferAttribute(pos, c),
+    ];
+  }
+  const base = triIndex * 3;
+  return [
+    new THREE.Vector3().fromBufferAttribute(pos, base),
+    new THREE.Vector3().fromBufferAttribute(pos, base + 1),
+    new THREE.Vector3().fromBufferAttribute(pos, base + 2),
+  ];
+}
+
+function findFaces(geometry) {
+  const triCount = geometry.index ? geometry.index.count / 3 : geometry.attributes.position.count / 3;
+  const clusters = new Map();
+  for (let t = 0; t < triCount; t++) {
+    const [v0, v1, v2] = readTriangle(geometry, t);
+    const normal = new THREE.Vector3().subVectors(v1, v0).cross(new THREE.Vector3().subVectors(v2, v0)).normalize();
+    const key = normal.x.toFixed(2) + ',' + normal.y.toFixed(2) + ',' + normal.z.toFixed(2);
+    if (!clusters.has(key)) clusters.set(key, { normalSum: new THREE.Vector3(), points: new Map() });
+    const cluster = clusters.get(key);
+    cluster.normalSum.add(normal);
+    [v0, v1, v2].forEach(v => {
+      const pKey = v.x.toFixed(4) + ',' + v.y.toFixed(4) + ',' + v.z.toFixed(4);
+      if (!cluster.points.has(pKey)) cluster.points.set(pKey, v);
+    });
+  }
+  const faces = [];
+  clusters.forEach(cluster => {
+    const normal = cluster.normalSum.clone().normalize();
+    const pts = [...cluster.points.values()];
+    const centroid = new THREE.Vector3();
+    pts.forEach(p => centroid.add(p));
+    centroid.multiplyScalar(1 / pts.length);
+    if (normal.dot(centroid) < 0) normal.negate();
+    faces.push({ centroid, normal });
+  });
+  return faces;
+}
+
+function numberTexture(value, textColor, haloColor) {
+  const size = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, size, size);
+  ctx.font = '900 76px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = haloColor;
+  ctx.fillStyle = textColor;
+  ctx.strokeText(String(value), size / 2, size / 2 + 4);
+  ctx.fillText(String(value), size / 2, size / 2 + 4);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function addFaceNumbers(mesh, geometry, planeSize, textColor, haloColor, startAt = 1) {
+  const faces = findFaces(geometry);
+  faces.forEach((face, i) => {
+    const tex = numberTexture(startAt + i, textColor, haloColor);
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, alphaTest: 0.05, side: THREE.DoubleSide });
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(planeSize, planeSize), mat);
+    plane.position.copy(face.centroid).addScaledVector(face.normal, 0.012);
+    plane.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), face.normal);
+    mesh.add(plane);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Dice geometry (placeholders, ready to be swapped for Blender exports)
@@ -313,20 +402,46 @@ function buildD6() {
 function gemMaterial(color, emissive, metalness = 0.35, roughness = 0.35) {
   return new THREE.MeshStandardMaterial({ color, emissive, emissiveIntensity: 0.18, metalness, roughness });
 }
-function buildD4() { return new THREE.Mesh(new THREE.TetrahedronGeometry(0.72), gemMaterial(0xA5453A, 0x2a0f0a)); }
-function buildD8() { return new THREE.Mesh(new THREE.OctahedronGeometry(0.68), gemMaterial(0x2F6B4F, 0x0c1f16)); }
+
+const IVORY = '#F3E3D2', IVORY_HALO = 'rgba(15,10,10,0.6)';
+const INK = '#241608', INK_HALO = 'rgba(255,250,235,0.65)';
+
+function buildD4() {
+  const geo = new THREE.TetrahedronGeometry(0.72);
+  const mesh = new THREE.Mesh(geo, gemMaterial(0xA5453A, 0x2a0f0a));
+  addFaceNumbers(mesh, geo, 0.34, IVORY, IVORY_HALO);
+  return mesh;
+}
+function buildD8() {
+  const geo = new THREE.OctahedronGeometry(0.68);
+  const mesh = new THREE.Mesh(geo, gemMaterial(0x2F6B4F, 0x0c1f16));
+  addFaceNumbers(mesh, geo, 0.27, IVORY, IVORY_HALO);
+  return mesh;
+}
 function buildD10() {
   const group = new THREE.Group();
   const mat = gemMaterial(0xC9A356, 0x3a2c11, 0.55, 0.3);
-  const top = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.62, 5), mat);
+  const top = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.62, 5, 1, true), mat);
   top.position.y = 0.31;
-  const bottom = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.62, 5), mat);
+  addFaceNumbers(top, top.geometry, 0.2, INK, INK_HALO, 1);
+  const bottom = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.62, 5, 1, true), mat);
   bottom.position.y = -0.31; bottom.rotation.x = Math.PI; bottom.rotation.y = Math.PI / 5;
+  addFaceNumbers(bottom, bottom.geometry, 0.2, INK, INK_HALO, 6);
   group.add(top, bottom);
   return group;
 }
-function buildD12() { return new THREE.Mesh(new THREE.DodecahedronGeometry(0.66), gemMaterial(0x5B3E8C, 0x160f2b)); }
-function buildD20() { return new THREE.Mesh(new THREE.IcosahedronGeometry(0.68), gemMaterial(0xE8B93E, 0x3a2c06, 0.5, 0.25)); }
+function buildD12() {
+  const geo = new THREE.DodecahedronGeometry(0.66);
+  const mesh = new THREE.Mesh(geo, gemMaterial(0x5B3E8C, 0x160f2b));
+  addFaceNumbers(mesh, geo, 0.3, IVORY, IVORY_HALO);
+  return mesh;
+}
+function buildD20() {
+  const geo = new THREE.IcosahedronGeometry(0.68);
+  const mesh = new THREE.Mesh(geo, gemMaterial(0xE8B93E, 0x3a2c06, 0.5, 0.25));
+  addFaceNumbers(mesh, geo, 0.2, INK, INK_HALO);
+  return mesh;
+}
 
 const DICE_CONFIG = {
   d4:  { label: 'd4',  build: buildD4,  results: range(1, 4) },
@@ -393,7 +508,7 @@ function tick() {
 tick();
 
 // ---------------------------------------------------------------------------
-// Rolling — one rAF pass drives rotation, hop and the settle bounce together
+// Rolling — one rAF pass drives rotation and hop together
 // ---------------------------------------------------------------------------
 function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
 
@@ -491,80 +606,180 @@ tray.addEventListener('click', rollCurrentDie);
 tray.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rollCurrentDie(); } });
 
 // ---------------------------------------------------------------------------
-// Table themes + fantasy backdrops
+// Fantasy backdrops — procedural, layered, and re-drawn per theme
 // ---------------------------------------------------------------------------
-const LANDSCAPES = {
-  emerald: `<svg class="landscape" viewBox="0 0 1200 220" preserveAspectRatio="none">
-    <path d="M0,220 L0,150 L45,185 L70,120 L100,175 L130,95 L165,165 L195,110 L225,175 L255,130 L290,185 L325,105 L365,180 L405,125 L445,185 L485,115 L525,175 L565,135 L610,195 L650,125 L695,180 L735,115 L780,185 L820,135 L865,175 L905,105 L945,180 L985,125 L1025,185 L1065,135 L1105,180 L1145,115 L1180,175 L1200,150 L1200,220 Z" fill="var(--felt-dark)" opacity="0.85"/>
-  </svg>`,
-  dragon: `<svg class="landscape" viewBox="0 0 1200 220" preserveAspectRatio="none">
-    <ellipse cx="760" cy="70" rx="130" ry="80" fill="#ff7a3d" opacity="0.12"/>
-    <path d="M0,220 L0,170 L120,60 L220,150 L340,40 L470,160 L600,70 L640,95 L680,50 L760,150 L860,90 L980,170 L1080,110 L1200,180 L1200,220 Z" fill="var(--felt-dark)" opacity="0.9"/>
-    <path d="M655,68 L680,50 L700,80" stroke="#FF9A5A" stroke-width="3" fill="none" opacity="0.8"/>
-  </svg>`,
-  moon: `<svg class="landscape" viewBox="0 0 1200 220" preserveAspectRatio="none">
-    <circle cx="1010" cy="55" r="34" fill="#E4ECFB" opacity="0.9"/>
-    <circle cx="1024" cy="46" r="30" fill="var(--bg)" opacity="0.95"/>
-    <circle cx="1010" cy="55" r="46" fill="#E4ECFB" opacity="0.12"/>
-    <path d="M0,220 C150,140 250,190 400,150 C550,115 650,175 800,140 C950,110 1050,170 1200,145 L1200,220 Z" fill="var(--felt-dark)" opacity="0.88"/>
-    <g stroke="var(--felt-dark)" stroke-width="3" opacity="0.8">
-      <path d="M150,190 L150,140 M150,155 L130,140 M150,150 L172,136 M150,165 L128,155" fill="none"/>
-      <path d="M980,185 L980,130 M980,148 L958,132 M980,142 L1004,128 M980,160 L956,148" fill="none"/>
-    </g>
-  </svg>`,
-  parchment: `<svg class="landscape" viewBox="0 0 1200 220" preserveAspectRatio="none">
-    <path d="M180,150 A80,80 0 0 1 340,150 Z" fill="var(--accent-bright)" opacity="0.35"/>
-    <path d="M0,220 C180,130 320,185 480,150 C640,118 760,180 920,148 C1040,124 1120,175 1200,155 L1200,220 Z" fill="var(--felt-dark)" opacity="0.8"/>
-    <g fill="var(--felt-dark)" opacity="0.85">
-      <rect x="246" y="150" width="10" height="26"/><circle cx="251" cy="140" r="26"/>
-      <rect x="856" y="140" width="10" height="30"/><circle cx="861" cy="128" r="24"/>
-      <rect x="96" y="160" width="8" height="22"/><circle cx="100" cy="152" r="18"/>
-    </g>
-  </svg>`,
-  frost: `<svg class="landscape" viewBox="0 0 1200 220" preserveAspectRatio="none">
-    <path d="M0,190 L100,110 L200,170 L320,80 L450,165 L580,100 L700,175 L820,95 L960,170 L1080,120 L1200,175 L1200,220 L0,220 Z" fill="var(--accent-bright)" opacity="0.35"/>
-    <path d="M0,220 L0,180 L40,205 L60,155 L90,195 L115,140 L150,190 L180,150 L210,195 L245,160 L280,205 L370,190 L400,150 L430,195 L460,145 L490,195 L800,195 L830,150 L860,195 L890,150 L920,195 L1200,200 L1200,220 Z" fill="var(--felt-dark)" opacity="0.92"/>
-  </svg>`,
-};
+const SVGNS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs) {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+function landscapeSVG(cls) {
+  return el('svg', { class: 'landscape-layer ' + cls, viewBox: '0 0 1200 220', preserveAspectRatio: 'none' });
+}
 
+function pineTree(x, baseY, scale, color) {
+  const g = el('g', { transform: `translate(${x},${baseY}) scale(${scale})` });
+  g.appendChild(el('rect', { x: -4, y: -14, width: 8, height: 16, fill: '#3b2a1a' }));
+  [[-20, 34], [-38, 27], [-56, 19]].forEach(([y, w]) => {
+    g.appendChild(el('polygon', { points: `0,${y - 20} ${-w / 2},${y} ${w / 2},${y}`, fill: color }));
+  });
+  return g;
+}
+function oakTree(x, baseY, scale, trunkColor, canopyColor) {
+  const g = el('g', { transform: `translate(${x},${baseY}) scale(${scale})` });
+  g.appendChild(el('rect', { x: -4, y: -18, width: 8, height: 20, fill: trunkColor }));
+  [[0, -40, 22], [-16, -32, 16], [16, -30, 17], [-8, -52, 15], [10, -50, 16]].forEach(([bx, by, r]) => {
+    g.appendChild(el('circle', { cx: bx, cy: by, r, fill: canopyColor }));
+  });
+  return g;
+}
+function bareTree(x, baseY, scale, color) {
+  const g = el('g', { transform: `translate(${x},${baseY}) scale(${scale})` });
+  g.appendChild(el('path', {
+    d: 'M0,0 L0,-40 M0,-40 L-14,-56 M0,-40 L12,-58 M0,-28 L-16,-40 M0,-22 L16,-34 M0,-34 L6,-52',
+    stroke: color, 'stroke-width': 3, fill: 'none', 'stroke-linecap': 'round'
+  }));
+  return g;
+}
+function mountainRange(w, h, peaks, color, opacity) {
+  let d = `M0,${h} `;
+  const step = w / peaks;
+  for (let i = 0; i <= peaks; i++) {
+    const x = i * step;
+    const y = h - (h * 0.3 + Math.random() * h * 0.5);
+    d += `L${x},${y} `;
+  }
+  d += `L${w},${h} Z`;
+  return el('path', { d, fill: color, opacity });
+}
+function hillPath(w, h, baseline, amp, color, opacity) {
+  let d = `M0,${h} L0,${baseline} `;
+  const segs = 6, step = w / segs;
+  for (let i = 1; i <= segs; i++) {
+    const x = i * step;
+    const y = baseline + Math.sin(i * 1.7) * amp;
+    d += `Q${x - step / 2},${y - amp} ${x},${y} `;
+  }
+  d += `L${w},${h} Z`;
+  return el('path', { d, fill: color, opacity });
+}
+function sunGlow(cx, cy, r, color) {
+  const g = el('g', {});
+  g.appendChild(el('circle', { cx, cy, r: r * 1.8, fill: color, opacity: 0.15 }));
+  g.appendChild(el('circle', { cx, cy, r, fill: color, opacity: 0.92 }));
+  for (let i = 0; i < 8; i++) {
+    const a = (i * Math.PI) / 4;
+    g.appendChild(el('line', {
+      x1: cx + Math.cos(a) * (r + 8), y1: cy + Math.sin(a) * (r + 8),
+      x2: cx + Math.cos(a) * (r + 22), y2: cy + Math.sin(a) * (r + 22),
+      stroke: color, 'stroke-width': 3, opacity: 0.55, 'stroke-linecap': 'round'
+    }));
+  }
+  return g;
+}
+function crescentMoon(cx, cy, r, glowColor, bgColor) {
+  const g = el('g', {});
+  g.appendChild(el('circle', { cx, cy, r: r * 1.4, fill: glowColor, opacity: 0.15 }));
+  g.appendChild(el('circle', { cx, cy, r, fill: glowColor, opacity: 0.92 }));
+  g.appendChild(el('circle', { cx: cx + r * 0.42, cy: cy - r * 0.28, r: r * 0.86, fill: bgColor }));
+  return g;
+}
+
+function buildLandscape(themeId, container) {
+  const w = 1200, h = 220;
+  const back = landscapeSVG('landscape-back');
+  const front = landscapeSVG('landscape-front');
+
+  if (themeId === 'emerald') {
+    back.appendChild(mountainRange(w, h, 8, 'var(--felt-dark)', 0.35));
+    for (let i = 0; i < 9; i++) {
+      front.appendChild(pineTree((i + 0.5) * (w / 9) + (Math.random() * 36 - 18), h - 6, 0.7 + Math.random() * 0.7,
+        i % 2 ? 'var(--felt-dark)' : 'var(--felt)'));
+    }
+    front.appendChild(el('rect', { x: 0, y: h - 14, width: w, height: 14, fill: 'var(--felt-dark)' }));
+  } else if (themeId === 'dragon') {
+    back.appendChild(el('ellipse', { cx: 760, cy: 90, rx: 160, ry: 90, fill: '#ff7a3d', opacity: 0.14 }));
+    back.appendChild(mountainRange(w, h, 7, 'var(--felt-dark)', 0.4));
+    front.appendChild(mountainRange(w, h * 0.85, 9, 'var(--felt-dark)', 0.95));
+    front.appendChild(el('path', {
+      d: 'M700,120 L730,90 L715,140 L750,105 L735,150', stroke: '#FF9A5A', 'stroke-width': 3, fill: 'none', opacity: 0.85
+    }));
+  } else if (themeId === 'moon') {
+    back.appendChild(crescentMoon(1010, 55, 34, '#E4ECFB', 'var(--bg)'));
+    back.appendChild(hillPath(w, h, 150, 22, 'var(--felt-dark)', 0.35));
+    for (let i = 0; i < 5; i++) {
+      front.appendChild(bareTree(120 + i * 230 + (Math.random() * 40 - 20), h - 20, 0.8 + Math.random() * 0.5, 'var(--felt-dark)'));
+    }
+    front.appendChild(hillPath(w, h, 170, 18, 'var(--felt-dark)', 0.9));
+  } else if (themeId === 'parchment') {
+    back.appendChild(sunGlow(300, 130, 30, 'var(--accent-bright)'));
+    back.appendChild(hillPath(w, h, 155, 20, 'var(--felt-dark)', 0.3));
+    for (let i = 0; i < 5; i++) {
+      front.appendChild(oakTree(150 + i * 230 + (Math.random() * 40 - 20), h - 16, 0.75 + Math.random() * 0.55,
+        '#5C4326', 'var(--felt-dark)'));
+    }
+    front.appendChild(hillPath(w, h, 172, 16, 'var(--felt-dark)', 0.85));
+  } else if (themeId === 'frost') {
+    back.appendChild(mountainRange(w, h, 8, 'var(--accent-bright)', 0.4));
+    for (let i = 0; i < 8; i++) {
+      front.appendChild(pineTree((i + 0.5) * (w / 8) + (Math.random() * 36 - 18), h - 6, 0.65 + Math.random() * 0.6,
+        i % 2 ? 'var(--felt-dark)' : 'var(--accent-dark)'));
+    }
+    front.appendChild(el('rect', { x: 0, y: h - 12, width: w, height: 12, fill: 'var(--accent-bright)', opacity: 0.9 }));
+  }
+
+  container.appendChild(back);
+  container.appendChild(front);
+}
+
+// ---------------------------------------------------------------------------
+// Table themes
+// ---------------------------------------------------------------------------
 const THEME_META = {
-  emerald:   { name: 'Emerald Table',    swatch: ['#1B3A2F', '#E8C77A'], torch: 0xffcf99, rim: 0xbcd4ff, particle: { type: 'firefly', count: 16, color: '#E8C77A' } },
-  dragon:    { name: 'Dragonfire Hoard', swatch: ['#3B1414', '#FBD98A'], torch: 0xff8a50, rim: 0xff5a3c, particle: { type: 'ember',   count: 18, color: '#FF7A3D' } },
-  moon:      { name: 'Ninth Moon',       swatch: ['#16213A', '#E4ECFB'], torch: 0xbcd4ff, rim: 0xe4ecfb, particle: { type: 'star',    count: 24, color: '#E4ECFB' }, fairy: true },
-  parchment: { name: 'Sunlit Parchment', swatch: ['#D3A272', '#8C5A1E'], torch: 0xffe0a0, rim: 0xffcf8a, particle: { type: 'mote',    count: 14, color: '#F0C987' } },
-  frost:     { name: 'Frostspire',       swatch: ['#A8C8E0', '#5D7E97'], torch: 0xdff0ff, rim: 0xffffff, particle: { type: 'snow',    count: 26, color: '#BFE0FF' }, fairy: true },
+  emerald:   { name: 'Emerald Table',    swatch: ['#1B3A2F', '#E8C77A'], torch: 0xffcf99, rim: 0xbcd4ff,
+    particles: [{ type: 'firefly', count: 16, color: '#E8C77A' }] },
+  dragon:    { name: 'Dragonfire Hoard', swatch: ['#3B1414', '#FBD98A'], torch: 0xff8a50, rim: 0xff5a3c,
+    particles: [{ type: 'ember', count: 16, color: '#FF7A3D' }, { type: 'smoke', count: 5, color: 'rgba(140,90,70,0.28)' }] },
+  moon:      { name: 'Ninth Moon',       swatch: ['#16213A', '#E4ECFB'], torch: 0xbcd4ff, rim: 0xe4ecfb,
+    particles: [{ type: 'star', count: 24, color: '#E4ECFB' }], fairy: true },
+  parchment: { name: 'Sunlit Parchment', swatch: ['#D3A272', '#8C5A1E'], torch: 0xffe0a0, rim: 0xffcf8a,
+    particles: [{ type: 'mote', count: 14, color: '#F0C987' }] },
+  frost:     { name: 'Frostspire',       swatch: ['#A8C8E0', '#5D7E97'], torch: 0xdff0ff, rim: 0xffffff,
+    particles: [{ type: 'snow', count: 26, color: '#BFE0FF' }], fairy: true },
 };
 const THEME_ORDER = ['emerald', 'dragon', 'moon', 'parchment', 'frost'];
 
 function buildAmbience(themeId) {
   const wrap = document.getElementById('ambience');
-  wrap.innerHTML = LANDSCAPES[themeId] || '';
+  wrap.innerHTML = '';
+  buildLandscape(themeId, wrap);
   if (reducedMotion) return;
 
   const meta = THEME_META[themeId];
-  const p = meta.particle;
-  for (let i = 0; i < p.count; i++) {
-    const el = document.createElement('div');
-    el.className = 'particle p-' + p.type;
-    el.style.setProperty('--glow', p.color);
-    el.style.setProperty('--drift', (Math.random() * 60 - 30) + 'px');
-    el.style.left = Math.random() * 100 + 'vw';
-    if (p.type === 'star') el.style.top = Math.random() * 55 + 'vh';
-    const baseDur = { ember: 5, snow: 10, star: 4, firefly: 13, mote: 15 }[p.type] || 12;
-    const dur = baseDur + Math.random() * baseDur * 0.6;
-    el.style.animationDuration = dur + 's';
-    el.style.animationDelay = (-Math.random() * dur) + 's';
-    const size = p.type === 'star' ? 2 + Math.random() * 2 : 3 + Math.random() * 3;
-    el.style.width = el.style.height = size + 'px';
-    wrap.appendChild(el);
-  }
+  meta.particles.forEach(p => {
+    for (let i = 0; i < p.count; i++) {
+      const div = document.createElement('div');
+      div.className = 'particle p-' + p.type;
+      div.style.setProperty('--glow', p.color);
+      div.style.setProperty('--drift', (Math.random() * 60 - 30) + 'px');
+      div.style.left = Math.random() * 100 + 'vw';
+      if (p.type === 'star') div.style.top = Math.random() * 55 + 'vh';
+      const baseDur = { ember: 5, smoke: 14, snow: 10, star: 4, firefly: 13, mote: 15 }[p.type] || 12;
+      const dur = baseDur + Math.random() * baseDur * 0.6;
+      div.style.animationDuration = dur + 's';
+      div.style.animationDelay = (-Math.random() * dur) + 's';
+      const size = p.type === 'star' ? 2 + Math.random() * 2 : p.type === 'smoke' ? 16 + Math.random() * 12 : 3 + Math.random() * 3;
+      div.style.width = div.style.height = size + 'px';
+      wrap.appendChild(div);
+    }
+  });
 
   if (meta.fairy) {
-    const count = 2;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < 2; i++) {
       const f = document.createElement('div');
       f.className = 'fairy';
-      f.style.setProperty('--glow', p.color === '#BFE0FF' ? '#BFE0FF' : '#E4ECFB');
+      f.style.setProperty('--glow', themeId === 'frost' ? '#BFE0FF' : '#E4ECFB');
       const dur = 20 + Math.random() * 6;
       f.style.animationDuration = dur + 's';
       f.style.animationDelay = (-Math.random() * dur) + 's';
