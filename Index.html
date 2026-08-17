@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Faerie's Fortune — Dice Tray</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="ambience"></div>
+
+<div class="stage">
+  <header>
+    <p class="eyebrow">The Gaming Table</p>
+    <h1>The Faerie's <span>Fortune</span></h1>
+  </header>
+
+  <div class="theme-select" id="themeSelect" role="group" aria-label="Choose a table theme">
+    <span class="theme-label">Table</span>
+  </div>
+
+  <div class="dice-select" id="diceSelect" role="tablist" aria-label="Choose a die"></div>
+
+  <div class="auth-panel" id="authPanel"></div>
+  <div class="party-panel" id="partyPanel"></div>
+
+  <div class="tray-wrap" id="trayWrap">
+    <div class="tray-rim" id="tray" role="button" tabindex="0" aria-label="Roll the die">
+      <div class="tray-felt">
+        <canvas id="scene" aria-hidden="true"></canvas>
+      </div>
+    </div>
+    <div class="result-hud" id="resultHud" aria-live="polite">—</div>
+  </div>
+
+  <p class="hint" id="hint">Click the tray, or press Enter / Space, to roll</p>
+
+  <div class="ledger">
+    <h2 id="ledgerHeading">Roll Log</h2>
+    <ul id="log"><li class="empty">No rolls yet — give it a throw.</li></ul>
+  </div>
+</div>
+
+<!-- Accounts (optional — see config.js + SETUP.md) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+
+<!-- 3D dice -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="dice.js"></script>
+
+<!-- Party, notes, and roll log (local by default, cloud-synced once signed in) -->
+<script src="party.js"></script>
+</body>
+</html>

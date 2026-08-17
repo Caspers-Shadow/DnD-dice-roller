@@ -1,338 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>The Faerie's Fortune - Dice Tray</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    /* Emerald Table - dark, default */
-    --bg: #1C1712;
-    --bg-glow: #2a1810;
-    --felt: #1B3A2F;
-    --felt-light: #234A3B;
-    --felt-dark: #0D1F19;
-    --accent: #C9A356;
-    --accent-dark: #8C6B32;
-    --accent-bright: #E8C77A;
-    --text: #EFE3C8;
-    --text-dim: #B8A98A;
-    --ink: #1C1712;
-    --panel-a: #2a2018;
-    --panel-b: #1a140f;
-    --crit: #E8B93E;
-    --fail: #C0584A;
-
-    --display: 'Cinzel', serif;
-    --body: 'Crimson Pro', serif;
-    --mono: 'JetBrains Mono', monospace;
-  }
-
-  html[data-theme="dragon"]{
-    --bg: #170D0B; --bg-glow: #4a1a12;
-    --felt: #3B1414; --felt-light: #59211E; --felt-dark: #1C0808;
-    --accent: #E8B93E; --accent-dark: #8A5A1E; --accent-bright: #FBD98A;
-    --text: #F3DCC0; --text-dim: #C79A78;
-    --ink: #170D0B;
-    --panel-a: #2e1710; --panel-b: #1c0d08;
-  }
-
-  html[data-theme="moon"]{
-    --bg: #0E1220; --bg-glow: #2a3a66;
-    --felt: #16213A; --felt-light: #22314F; --felt-dark: #0A0F1A;
-    --accent: #B9C9EA; --accent-dark: #4B5C7A; --accent-bright: #E4ECFB;
-    --text: #E7EDFB; --text-dim: #93A3C4;
-    --ink: #0E1220;
-    --panel-a: #1a2033; --panel-b: #10141f;
-  }
-
-  html[data-theme="parchment"]{
-    --bg: #F3E9D2; --bg-glow: #e8caa0;
-    --felt: #B98255; --felt-light: #D3A272; --felt-dark: #8C5A34;
-    --accent: #C98F3E; --accent-dark: #8C5A1E; --accent-bright: #F0C987;
-    --text: #3B2A1A; --text-dim: #7A6142;
-    --ink: #241608;
-    --panel-a: #EADFC4; --panel-b: #DECBA3;
-  }
-
-  html[data-theme="frost"]{
-    --bg: #EAF2F8; --bg-glow: #bcdcf0;
-    --felt: #7FA8C9; --felt-light: #A8C8E0; --felt-dark: #4E7896;
-    --accent: #8FB3D6; --accent-dark: #5D7E97; --accent-bright: #F8FBFF;
-    --text: #16232E; --text-dim: #55697A;
-    --ink: #0F1820;
-    --panel-a: #DCE9F3; --panel-b: #C7DCEB;
-  }
-
-  * { box-sizing: border-box; }
-
-  html, body { margin: 0; min-height: 100%; color: var(--text); font-family: var(--body); }
-
-  body {
-    display: flex; justify-content: center; padding: 44px 20px 80px;
-    background: radial-gradient(ellipse at 50% -10%, var(--bg-glow) 0%, transparent 60%), var(--bg);
-    transition: background-color 0.6s ease, color 0.6s ease;
-    position: relative; overflow-x: hidden;
-  }
-
-  #ambience { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-  .landscape-layer { position: absolute; left: -4%; right: -4%; bottom: 0; width: 108%; height: 28vh; min-height: 175px; }
-  .landscape-back { filter: blur(2.5px); opacity: 0.55; animation: driftSlow 46s ease-in-out infinite alternate; }
-  .landscape-front { animation: driftFast 30s ease-in-out infinite alternate; }
-  @keyframes driftSlow { 0% { transform: translateX(-1.4%); } 100% { transform: translateX(1.4%); } }
-  @keyframes driftFast { 0% { transform: translateX(-0.7%); } 100% { transform: translateX(0.7%); } }
-
-  .particle { position: fixed; bottom: -4vh; left: 0; border-radius: 50%; background: var(--glow); box-shadow: 0 0 8px 2px var(--glow); opacity: 0; }
-  .p-firefly, .p-mote, .p-ember { animation-name: floatUp; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
-  .p-smoke { animation-name: floatUp; animation-timing-function: ease-in-out; animation-iteration-count: infinite; filter: blur(6px); }
-  .p-snow { top: -4vh; bottom: auto; animation-name: fall; animation-timing-function: linear; animation-iteration-count: infinite; }
-  .p-star { bottom: auto; animation-name: twinkle; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
-
-  @keyframes floatUp {
-    0% { transform: translate(0,0); opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { transform: translate(var(--drift,20px), -108vh); opacity: 0; }
-  }
-  @keyframes fall {
-    0% { transform: translate(0,0); opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { transform: translate(var(--drift,30px), 112vh); opacity: 0; }
-  }
-  @keyframes twinkle {
-    0%, 100% { opacity: 0.15; transform: scale(0.75); }
-    50% { opacity: 1; transform: scale(1.15); }
-  }
-
-  .fairy {
-    position: fixed; top: 0; left: 0; width: 14px; height: 14px; border-radius: 50%;
-    background: radial-gradient(circle, #fff, var(--glow) 55%, transparent 75%);
-    box-shadow: 0 0 16px 5px var(--glow);
-    animation: fairyFly linear infinite;
-  }
-  .fairy::after {
-    content: ''; position: absolute; inset: -7px; border-radius: 50%;
-    box-shadow: 0 0 10px 3px var(--glow); animation: sparkleTwinkle 1.1s ease-in-out infinite;
-  }
-  @keyframes sparkleTwinkle { 0%, 100% { opacity: 0.25; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1.25); } }
-  @keyframes fairyFly {
-    0%   { transform: translate(-8vw, 62vh) scale(0.8); opacity: 0; }
-    8%   { opacity: 1; }
-    25%  { transform: translate(18vw, 28vh) scale(1); }
-    50%  { transform: translate(52vw, 46vh) scale(0.9); }
-    75%  { transform: translate(82vw, 18vh) scale(1.05); }
-    92%  { opacity: 1; }
-    100% { transform: translate(112vw, 38vh) scale(0.8); opacity: 0; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    #ambience { display: none; }
-  }
-
-  .stage { position: relative; z-index: 1; width: 100%; max-width: 920px; display: flex; flex-direction: column; align-items: center; }
-
-  header { text-align: center; margin-bottom: 18px; }
-
-  .eyebrow {
-    font-family: var(--mono); font-size: 12px; letter-spacing: 0.32em; text-transform: uppercase;
-    color: var(--accent); margin: 0 0 10px; transition: color 0.5s ease;
-  }
-  h1 {
-    font-family: var(--display); font-weight: 700; font-size: clamp(34px, 6vw, 56px);
-    letter-spacing: 0.04em; margin: 0; color: var(--text); transition: color 0.5s ease;
-  }
-  h1 span { color: var(--accent-bright); transition: color 0.5s ease; }
-
-  .theme-select { display: flex; gap: 10px; align-items: center; justify-content: center; margin: 6px 0 28px; flex-wrap: wrap; }
-  .theme-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); margin-right: 2px; }
-  .theme-swatch {
-    width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid rgba(128,128,128,0.35);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.35); transition: transform 0.15s ease, border-color 0.15s ease; padding: 0;
-  }
-  .theme-swatch:hover { transform: translateY(-2px) scale(1.06); }
-  .theme-swatch:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
-  .theme-swatch.active { border-color: var(--accent-bright); box-shadow: 0 0 0 3px rgba(232,199,122,0.25), 0 2px 6px rgba(0,0,0,0.35); }
-
-  .dice-select { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 30px; }
-  .die-btn {
-    font-family: var(--mono); font-weight: 600; font-size: 14px; color: var(--text-dim);
-    background: linear-gradient(180deg, var(--panel-a), var(--panel-b)); border: 1px solid var(--accent-dark);
-    border-radius: 10px; padding: 10px 16px; cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, background-color 0.4s ease;
-  }
-  .die-btn:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--text); }
-  .die-btn:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
-  .die-btn.active {
-    color: var(--ink); background: linear-gradient(180deg, var(--accent-bright), var(--accent-dark));
-    border-color: var(--accent-bright); box-shadow: 0 0 18px rgba(232,199,122,0.3);
-  }
-  .die-btn:disabled, .theme-swatch:disabled { opacity: 0.5; cursor: default; }
-
-  .tray-wrap { position: relative; width: min(100%, 460px); aspect-ratio: 1 / 1; }
-  .tray-rim {
-    position: absolute; inset: 0; border-radius: 50%; padding: 22px;
-    background: conic-gradient(from 180deg, var(--accent-dark), var(--accent-bright), var(--accent-dark),
-      var(--felt-dark), var(--accent-dark), var(--accent-bright), var(--accent-dark));
-    box-shadow: 0 24px 50px -14px rgba(0,0,0,0.55), inset 0 0 0 2px rgba(255,255,255,0.08);
-    cursor: pointer; transition: box-shadow 0.4s ease, background 0.5s ease;
-  }
-  .tray-rim:focus-visible { outline: 3px solid var(--accent-bright); outline-offset: 4px; }
-  .tray-felt {
-    position: relative; width: 100%; height: 100%; border-radius: 50%;
-    background: radial-gradient(ellipse at 50% 40%, var(--felt-light) 0%, var(--felt) 55%, var(--felt-dark) 100%);
-    box-shadow: inset 0 0 40px rgba(0,0,0,0.55), inset 0 0 90px rgba(0,0,0,0.45);
-    overflow: hidden; transition: background 0.5s ease;
-  }
-  #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-
-  .tray-wrap.crit .tray-rim { box-shadow: 0 24px 50px -14px rgba(0,0,0,0.55), 0 0 60px 6px rgba(232,185,62,0.55); }
-  .tray-wrap.fail .tray-rim { box-shadow: 0 24px 50px -14px rgba(0,0,0,0.55), 0 0 60px 6px rgba(192,88,74,0.55); }
-
-  .result-hud {
-    position: absolute; left: 50%; bottom: -6px; transform: translate(-50%, 50%);
-    min-width: 96px; text-align: center; font-family: var(--display); font-weight: 700; font-size: 28px;
-    color: var(--ink); background: linear-gradient(180deg, var(--accent-bright), var(--accent));
-    border: 2px solid var(--text); border-radius: 12px; padding: 10px 20px;
-    box-shadow: 0 10px 24px -8px rgba(0,0,0,0.6); pointer-events: none; transition: background 0.4s ease, border-color 0.4s ease;
-  }
-  .result-hud .tag { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; font-weight: 600; margin-top: 2px; }
-  .result-hud.crit { background: linear-gradient(180deg, #fbe28a, var(--crit)); }
-  .result-hud.fail { background: linear-gradient(180deg, #d98b7e, var(--fail)); color: #fff; }
-
-  .hint { margin: 46px 0 6px; font-size: 14px; color: var(--text-dim); font-style: italic; transition: color 0.4s ease; }
-
-  .party-panel {
-    width: min(100%, 560px); margin: 0 0 24px;
-    background: linear-gradient(180deg, var(--panel-a), var(--panel-b));
-    border: 1px solid var(--accent-dark); border-radius: 12px; padding: 16px 20px;
-    transition: background 0.5s ease, border-color 0.5s ease;
-  }
-  .party-panel h2 {
-    font-family: var(--display); font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--accent); margin: 0 0 6px;
-  }
-  .party-hint { margin: 0 0 12px; font-size: 13px; color: var(--text-dim); font-style: italic; }
-  .party-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-  .party-form:last-child { margin-bottom: 0; }
-  .party-form input[type="text"] {
-    flex: 1; min-width: 140px; background: rgba(0,0,0,0.18); border: 1px solid var(--accent-dark);
-    border-radius: 8px; padding: 9px 12px; color: var(--text); font-family: var(--body); font-size: 14px;
-  }
-  .party-form input[type="text"]::placeholder { color: var(--text-dim); }
-  .party-form input[type="text"]:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 1px; }
-  .party-form button { white-space: nowrap; }
-  .party-name-row { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .party-name { font-family: var(--display); font-weight: 700; font-size: 19px; color: var(--accent-bright); }
-  .party-actions { display: flex; gap: 14px; }
-  .link-btn {
-    background: none; border: none; padding: 0; cursor: pointer;
-    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
-    color: var(--text-dim); text-decoration: underline; text-underline-offset: 3px;
-  }
-  .link-btn:hover { color: var(--accent-bright); }
-  .member-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .member-chip {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(0,0,0,0.18); border: 1px solid var(--accent-dark); border-radius: 999px;
-    padding: 5px 8px 5px 13px; font-family: var(--mono); font-size: 12px; color: var(--text-dim);
-  }
-  .member-chip.active { background: linear-gradient(180deg, var(--accent-bright), var(--accent-dark)); color: var(--ink); border-color: var(--accent-bright); font-weight: 600; }
-  .member-chip .chip-name { cursor: pointer; }
-  .member-chip .remove { cursor: pointer; opacity: 0.55; font-size: 11px; }
-  .member-chip .remove:hover { opacity: 1; }
-
-  .ledger {
-    width: min(100%, 560px); margin-top: 26px;
-    background: linear-gradient(180deg, var(--panel-a), var(--panel-b));
-    border: 1px solid var(--accent-dark); border-radius: 12px; padding: 18px 22px;
-    transition: background 0.5s ease, border-color 0.5s ease;
-  }
-  .ledger h2 {
-    font-family: var(--display); font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--accent); margin: 0 0 10px; border-bottom: 1px solid var(--accent-dark); padding-bottom: 8px;
-  }
-  #log { list-style: none; margin: 0; padding: 0; max-height: 170px; overflow-y: auto; font-family: var(--mono); font-size: 13px; }
-  #log li { display: flex; justify-content: space-between; padding: 6px 2px; border-bottom: 1px dashed rgba(128,128,128,0.2); color: var(--text-dim); }
-  #log li:last-child { border-bottom: none; }
-  #log li .val { color: var(--text); font-weight: 600; }
-  #log li.crit .val { color: var(--crit); }
-  #log li.fail .val { color: var(--fail); }
-  #log li.log-note { font-style: italic; }
-  #log li.log-session {
-    display: block; text-align: center; border-bottom: none; padding: 8px 0; margin: 4px 0;
-    border-top: 1px dashed var(--accent-dark); border-bottom: 1px dashed var(--accent-dark);
-    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
-  }
-  #log .empty { text-align: center; padding: 14px 0; opacity: 0.6; font-style: italic; font-family: var(--body); }
-
-  @media (prefers-reduced-motion: reduce) {
-    .die-btn, .theme-swatch, .tray-rim { transition: none; }
-  }
-</style>
-</head>
-<body>
-
-<div id="ambience"></div>
-
-<div class="stage">
-  <header>
-    <p class="eyebrow">The Gaming Table</p>
-    <h1>The Faerie's <span>Fortune</span></h1>
-  </header>
-
-  <div class="theme-select" id="themeSelect" role="group" aria-label="Choose a table theme">
-    <span class="theme-label">Table</span>
-  </div>
-
-  <div class="dice-select" id="diceSelect" role="tablist" aria-label="Choose a die"></div>
-
-  <div class="party-panel" id="partyPanel"></div>
-
-  <div class="tray-wrap" id="trayWrap">
-    <div class="tray-rim" id="tray" role="button" tabindex="0" aria-label="Roll the die">
-      <div class="tray-felt">
-        <canvas id="scene" aria-hidden="true"></canvas>
-      </div>
-    </div>
-    <div class="result-hud" id="resultHud" aria-live="polite">-</div>
-  </div>
-
-  <p class="hint" id="hint">Click the tray, or press Enter / Space, to roll</p>
-
-  <div class="ledger">
-    <h2 id="ledgerHeading">Roll Log</h2>
-    <ul id="log"><li class="empty">No rolls yet - give it a throw.</li></ul>
-  </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
 /* =========================================================================
-   ROLL THE BONES - 3D dice tray
+   ROLL THE BONES — 3D dice tray
    -------------------------------------------------------------------------
    Every die is placeholder Three.js geometry. Each real face gets exactly
    one printed numeral (faces are found by clustering triangles that share
    a surface normal, so this works on any convex shape without hand-mapped
    UVs). When you roll, the die's final orientation is computed so the
-   face carrying the chosen result ends up turned toward the viewer - the
-   number showing IS the result, not a coincidence - and that face gets a
+   face carrying the chosen result ends up turned toward the viewer — the
+   number showing IS the result, not a coincidence — and that face gets a
    quick highlight pop once it settles. Dice gem colors follow the current
    table theme.
 
    SWAPPING IN YOUR OWN BLENDER DICE
    ----------------------------------
    1. Model each die centered on the origin, ~1 unit across, export as
-      glTF Binary (.glb) - one file per die, e.g. dice-models/d20.glb.
+      glTF Binary (.glb) — one file per die, e.g. dice-models/d20.glb.
    2. Add a classic GLTFLoader script tag right after the three.min.js tag
       above, pointing at (cdnjs) three.js/r128/examples/js/loaders/GLTFLoader.js
    3. In DICE_CONFIG below, replace a die's `build` function to load and
       cache the .glb with THREE.GLTFLoader, then .clone() it on later rolls.
       If your model already has numbers sculpted in, you can skip
-      addFaceNumbers() for that die - but then you'll also need to tag each
+      addFaceNumbers() for that die — but then you'll also need to tag each
       face mesh's userData.value/faceNormal yourself so landing-on-result
       still works (see addFaceNumbers for the shape to match).
    ========================================================================= */
@@ -366,7 +53,7 @@ let currentThemeId = THEME_ORDER.includes(savedTheme) ? savedTheme : 'emerald';
 // ---------------------------------------------------------------------------
 // Face-finding: works on any convex polyhedron by clustering triangles that
 // share a surface normal (one cluster = one real face). -0 is normalized to
-// 0 before building the cluster key - without that, floating-point noise on
+// 0 before building the cluster key — without that, floating-point noise on
 // coordinates that are mathematically zero can split a single face into two
 // clusters, which is what caused faces with a missing or doubled number.
 // ---------------------------------------------------------------------------
@@ -450,7 +137,7 @@ function numberTexture(text, textColor, haloColor) {
   return tex;
 }
 
-// labels: array of {value, text} - one entry per real face, in cluster order.
+// labels: array of {value, text} — one entry per real face, in cluster order.
 // Also stamps userData.value / userData.faceNormal on each number plane, in
 // `mesh`'s PARENT-local frame, so rollCurrentDie() can look up "which way do
 // I need to turn to show a 7" without caring how deep the mesh is nested.
@@ -631,7 +318,7 @@ function tick() {
 tick();
 
 // ---------------------------------------------------------------------------
-// Rolling - tumble chaotically, then slerp precisely onto the face that
+// Rolling — tumble chaotically, then slerp precisely onto the face that
 // carries the rolled value so what's showing when it stops IS the result.
 // ---------------------------------------------------------------------------
 function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
@@ -737,199 +424,6 @@ function finishRoll(value, cfg, winningPlane) {
 }
 
 // ---------------------------------------------------------------------------
-// Party - a name, a roster, and a running log of rolls + notes, saved to
-// this browser's localStorage. (Accounts / cross-device sync are a later
-// step; for now the party lives on whichever device creates it.)
-// ---------------------------------------------------------------------------
-const PARTY_KEY = 'ff-party';
-function loadParty() {
-  try { const raw = localStorage.getItem(PARTY_KEY); return raw ? JSON.parse(raw) : null; }
-  catch (e) { return null; }
-}
-function saveParty() {
-  try { localStorage.setItem(PARTY_KEY, JSON.stringify(party)); } catch (e) { /* storage unavailable */ }
-}
-function nowIso() { return new Date().toISOString(); }
-function timeLabel(iso) { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-let party = loadParty();
-let soloLog = []; // ephemeral fallback log, used only while there's no party
-
-function createParty(name) {
-  party = { name, members: [], activeMember: null, log: [{ type: 'session', time: nowIso() }] };
-  saveParty();
-  renderParty();
-}
-function addMember(name) {
-  const clean = name.trim();
-  if (!party || !clean || party.members.includes(clean)) return;
-  party.members.push(clean);
-  if (!party.activeMember) party.activeMember = clean;
-  saveParty(); renderParty();
-}
-function removeMember(name) {
-  if (!party) return;
-  party.members = party.members.filter(m => m !== name);
-  if (party.activeMember === name) party.activeMember = party.members[0] || null;
-  saveParty(); renderParty();
-}
-function setActiveMember(name) {
-  if (!party) return;
-  party.activeMember = name;
-  saveParty(); renderParty();
-}
-function newSession() {
-  if (!party) return;
-  party.log.push({ type: 'session', time: nowIso() });
-  saveParty(); renderParty();
-}
-function addNote(text) {
-  const clean = text.trim();
-  if (!party || !clean) return;
-  party.log.push({ type: 'note', member: party.activeMember, text: clean, time: nowIso() });
-  saveParty(); renderParty();
-}
-function disbandParty() {
-  if (!confirm('Disband this party? This clears its roster and log from this browser.')) return;
-  party = null;
-  localStorage.removeItem(PARTY_KEY);
-  renderParty();
-}
-
-function recordRoll(cfg, display, isCrit, isFail) {
-  if (party) {
-    party.log.push({ type: 'roll', member: party.activeMember, die: cfg.label, display, crit: !!isCrit, fail: !!isFail, time: nowIso() });
-    saveParty();
-  } else {
-    soloLog.unshift({ type: 'roll', die: cfg.label, display, crit: !!isCrit, fail: !!isFail, time: nowIso() });
-    if (soloLog.length > 8) soloLog.pop();
-  }
-  renderLedger();
-}
-
-function renderEntry(e) {
-  const li = document.createElement('li');
-  if (e.type === 'session') {
-    li.className = 'log-session';
-    li.textContent = 'Session began · ' + timeLabel(e.time);
-    return li;
-  }
-  const who = e.member ? escapeHtml(e.member) + ' · ' : '';
-  if (e.type === 'note') {
-    li.className = 'log-note';
-    li.innerHTML = `<span>${who}“${escapeHtml(e.text)}”</span><span class="val">${timeLabel(e.time)}</span>`;
-    return li;
-  }
-  if (e.crit) li.classList.add('crit');
-  if (e.fail) li.classList.add('fail');
-  li.innerHTML = `<span>${who}${e.die} · ${timeLabel(e.time)}${e.crit ? ' · critical!' : ''}${e.fail ? ' · fumble' : ''}</span><span class="val">${e.display}</span>`;
-  return li;
-}
-
-function renderLedger() {
-  const log = document.getElementById('log');
-  const heading = document.getElementById('ledgerHeading');
-  log.innerHTML = '';
-  if (party) {
-    heading.textContent = party.name + ' - Log';
-    const entries = party.log.slice().reverse().slice(0, 40);
-    if (entries.length === 0) { log.innerHTML = '<li class="empty">No rolls yet - give it a throw.</li>'; return; }
-    entries.forEach(e => log.appendChild(renderEntry(e)));
-  } else {
-    heading.textContent = 'Roll Log';
-    if (soloLog.length === 0) { log.innerHTML = '<li class="empty">No rolls yet - give it a throw.</li>'; return; }
-    soloLog.forEach(e => log.appendChild(renderEntry(e)));
-  }
-}
-
-function buildCreateForm() {
-  const wrap = document.createElement('div');
-  wrap.innerHTML = '<h2>Gather a Party</h2><p class="party-hint">Name your party to start logging rolls and notes together.</p>';
-  const form = document.createElement('div');
-  form.className = 'party-form';
-  const input = document.createElement('input');
-  input.type = 'text'; input.placeholder = 'Party name (e.g. The Last Lantern)'; input.maxLength = 40;
-  const btn = document.createElement('button');
-  btn.className = 'die-btn'; btn.textContent = 'Found the Party';
-  btn.addEventListener('click', () => { if (input.value.trim()) createParty(input.value.trim()); });
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
-  form.appendChild(input); form.appendChild(btn);
-  wrap.appendChild(form);
-  return wrap;
-}
-
-function buildPartyManager() {
-  const wrap = document.createElement('div');
-
-  const nameRow = document.createElement('div');
-  nameRow.className = 'party-name-row';
-  const nameEl = document.createElement('span'); nameEl.className = 'party-name'; nameEl.textContent = party.name;
-  const actions = document.createElement('div'); actions.className = 'party-actions';
-  const sessBtn = document.createElement('button'); sessBtn.className = 'link-btn'; sessBtn.textContent = 'New Session';
-  sessBtn.addEventListener('click', newSession);
-  const disbandBtn = document.createElement('button'); disbandBtn.className = 'link-btn'; disbandBtn.textContent = 'Disband';
-  disbandBtn.addEventListener('click', disbandParty);
-  actions.appendChild(sessBtn); actions.appendChild(disbandBtn);
-  nameRow.appendChild(nameEl); nameRow.appendChild(actions);
-  wrap.appendChild(nameRow);
-
-  const chipsRow = document.createElement('div');
-  chipsRow.className = 'member-chips';
-  if (party.members.length === 0) {
-    const hint = document.createElement('p');
-    hint.className = 'party-hint'; hint.style.margin = '0 0 10px'; hint.textContent = 'Add your first party member below.';
-    wrap.appendChild(hint);
-  }
-  party.members.forEach(m => {
-    const chip = document.createElement('span');
-    chip.className = 'member-chip' + (party.activeMember === m ? ' active' : '');
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'chip-name'; nameSpan.textContent = m;
-    nameSpan.title = 'Set as current roller';
-    nameSpan.addEventListener('click', () => setActiveMember(m));
-    const removeSpan = document.createElement('span');
-    removeSpan.className = 'remove'; removeSpan.textContent = '✕'; removeSpan.title = 'Remove';
-    removeSpan.addEventListener('click', ev => { ev.stopPropagation(); removeMember(m); });
-    chip.appendChild(nameSpan); chip.appendChild(removeSpan);
-    chipsRow.appendChild(chip);
-  });
-  wrap.appendChild(chipsRow);
-
-  const addRow = document.createElement('div');
-  addRow.className = 'party-form';
-  const memberInput = document.createElement('input');
-  memberInput.type = 'text'; memberInput.placeholder = 'Add a member…'; memberInput.maxLength = 24;
-  const addBtn = document.createElement('button'); addBtn.className = 'die-btn'; addBtn.textContent = 'Add';
-  addBtn.addEventListener('click', () => { if (memberInput.value.trim()) { addMember(memberInput.value.trim()); memberInput.value = ''; } });
-  memberInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); } });
-  addRow.appendChild(memberInput); addRow.appendChild(addBtn);
-  wrap.appendChild(addRow);
-
-  const noteRow = document.createElement('div');
-  noteRow.className = 'party-form';
-  const noteInput = document.createElement('input');
-  noteInput.type = 'text'; noteInput.maxLength = 200;
-  noteInput.placeholder = party.activeMember ? `Note as ${party.activeMember}…` : 'Add a note…';
-  const noteBtn = document.createElement('button'); noteBtn.className = 'die-btn'; noteBtn.textContent = 'Add Note';
-  noteBtn.addEventListener('click', () => { if (noteInput.value.trim()) { addNote(noteInput.value.trim()); noteInput.value = ''; } });
-  noteInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); noteBtn.click(); } });
-  noteRow.appendChild(noteInput); noteRow.appendChild(noteBtn);
-  wrap.appendChild(noteRow);
-
-  return wrap;
-}
-
-function renderParty() {
-  const panel = document.getElementById('partyPanel');
-  panel.innerHTML = '';
-  panel.appendChild(party ? buildPartyManager() : buildCreateForm());
-  renderLedger();
-}
-
-// ---------------------------------------------------------------------------
 // Dice tabs + theme swatches get disabled mid-roll so a switch can't yank
 // the die out from under an in-flight animation.
 // ---------------------------------------------------------------------------
@@ -948,7 +442,7 @@ DICE_ORDER.forEach(type => {
     if (rolling) return;
     currentType = type;
     mountDie(type);
-    document.getElementById('resultHud').innerHTML = '-';
+    document.getElementById('resultHud').innerHTML = '—';
     document.getElementById('resultHud').classList.remove('crit', 'fail');
     document.getElementById('trayWrap').classList.remove('crit', 'fail');
     document.getElementById('hint').textContent = 'Click the tray, or press Enter / Space, to roll';
@@ -965,7 +459,7 @@ tray.addEventListener('click', rollCurrentDie);
 tray.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rollCurrentDie(); } });
 
 // ---------------------------------------------------------------------------
-// Fantasy backdrops - procedural, layered, and re-drawn per theme
+// Fantasy backdrops — procedural, layered, and re-drawn per theme
 // ---------------------------------------------------------------------------
 const SVGNS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs) {
@@ -1143,7 +637,7 @@ function applyTheme(themeId) {
   rimLight.color.setHex(meta.rim);
   buildAmbience(themeId);
   mountDie(currentType);
-  document.getElementById('resultHud').innerHTML = '-';
+  document.getElementById('resultHud').innerHTML = '—';
   document.getElementById('resultHud').classList.remove('crit', 'fail');
   document.getElementById('trayWrap').classList.remove('crit', 'fail');
   document.getElementById('hint').textContent = 'Click the tray, or press Enter / Space, to roll';
@@ -1171,7 +665,3 @@ THEME_ORDER.forEach(id => {
 });
 
 applyTheme(currentThemeId);
-renderParty();
-</script>
-</body>
-</html>
