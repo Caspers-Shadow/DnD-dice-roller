@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>The Fearie's Fortune - Dice Tray</title>
+<title>The Faerie's Fortune — Dice Tray</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* Emerald Table - dark, default */
+    /* Emerald Table — dark, default */
     --bg: #1C1712;
     --bg-glow: #2a1810;
     --felt: #1B3A2F;
@@ -205,6 +205,46 @@
 
   .hint { margin: 46px 0 6px; font-size: 14px; color: var(--text-dim); font-style: italic; transition: color 0.4s ease; }
 
+  .party-panel {
+    width: min(100%, 560px); margin: 0 0 24px;
+    background: linear-gradient(180deg, var(--panel-a), var(--panel-b));
+    border: 1px solid var(--accent-dark); border-radius: 12px; padding: 16px 20px;
+    transition: background 0.5s ease, border-color 0.5s ease;
+  }
+  .party-panel h2 {
+    font-family: var(--display); font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 6px;
+  }
+  .party-hint { margin: 0 0 12px; font-size: 13px; color: var(--text-dim); font-style: italic; }
+  .party-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .party-form:last-child { margin-bottom: 0; }
+  .party-form input[type="text"] {
+    flex: 1; min-width: 140px; background: rgba(0,0,0,0.18); border: 1px solid var(--accent-dark);
+    border-radius: 8px; padding: 9px 12px; color: var(--text); font-family: var(--body); font-size: 14px;
+  }
+  .party-form input[type="text"]::placeholder { color: var(--text-dim); }
+  .party-form input[type="text"]:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 1px; }
+  .party-form button { white-space: nowrap; }
+  .party-name-row { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .party-name { font-family: var(--display); font-weight: 700; font-size: 19px; color: var(--accent-bright); }
+  .party-actions { display: flex; gap: 14px; }
+  .link-btn {
+    background: none; border: none; padding: 0; cursor: pointer;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-dim); text-decoration: underline; text-underline-offset: 3px;
+  }
+  .link-btn:hover { color: var(--accent-bright); }
+  .member-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .member-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(0,0,0,0.18); border: 1px solid var(--accent-dark); border-radius: 999px;
+    padding: 5px 8px 5px 13px; font-family: var(--mono); font-size: 12px; color: var(--text-dim);
+  }
+  .member-chip.active { background: linear-gradient(180deg, var(--accent-bright), var(--accent-dark)); color: var(--ink); border-color: var(--accent-bright); font-weight: 600; }
+  .member-chip .chip-name { cursor: pointer; }
+  .member-chip .remove { cursor: pointer; opacity: 0.55; font-size: 11px; }
+  .member-chip .remove:hover { opacity: 1; }
+
   .ledger {
     width: min(100%, 560px); margin-top: 26px;
     background: linear-gradient(180deg, var(--panel-a), var(--panel-b));
@@ -221,6 +261,12 @@
   #log li .val { color: var(--text); font-weight: 600; }
   #log li.crit .val { color: var(--crit); }
   #log li.fail .val { color: var(--fail); }
+  #log li.log-note { font-style: italic; }
+  #log li.log-session {
+    display: block; text-align: center; border-bottom: none; padding: 8px 0; margin: 4px 0;
+    border-top: 1px dashed var(--accent-dark); border-bottom: 1px dashed var(--accent-dark);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  }
   #log .empty { text-align: center; padding: 14px 0; opacity: 0.6; font-style: italic; font-family: var(--body); }
 
   @media (prefers-reduced-motion: reduce) {
@@ -244,47 +290,49 @@
 
   <div class="dice-select" id="diceSelect" role="tablist" aria-label="Choose a die"></div>
 
+  <div class="party-panel" id="partyPanel"></div>
+
   <div class="tray-wrap" id="trayWrap">
     <div class="tray-rim" id="tray" role="button" tabindex="0" aria-label="Roll the die">
       <div class="tray-felt">
         <canvas id="scene" aria-hidden="true"></canvas>
       </div>
     </div>
-    <div class="result-hud" id="resultHud" aria-live="polite">-</div>
+    <div class="result-hud" id="resultHud" aria-live="polite">—</div>
   </div>
 
   <p class="hint" id="hint">Click the tray, or press Enter / Space, to roll</p>
 
   <div class="ledger">
-    <h2>Roll Log</h2>
-    <ul id="log"><li class="empty">No rolls yet - give it a throw.</li></ul>
+    <h2 id="ledgerHeading">Roll Log</h2>
+    <ul id="log"><li class="empty">No rolls yet — give it a throw.</li></ul>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* =========================================================================
-   ROLL THE BONES - 3D dice tray
+   ROLL THE BONES — 3D dice tray
    -------------------------------------------------------------------------
    Every die is placeholder Three.js geometry. Each real face gets exactly
    one printed numeral (faces are found by clustering triangles that share
    a surface normal, so this works on any convex shape without hand-mapped
    UVs). When you roll, the die's final orientation is computed so the
-   face carrying the chosen result ends up turned toward the viewer - the
-   number showing IS the result, not a coincidence - and that face gets a
+   face carrying the chosen result ends up turned toward the viewer — the
+   number showing IS the result, not a coincidence — and that face gets a
    quick highlight pop once it settles. Dice gem colors follow the current
    table theme.
 
    SWAPPING IN YOUR OWN BLENDER DICE
    ----------------------------------
    1. Model each die centered on the origin, ~1 unit across, export as
-      glTF Binary (.glb) - one file per die, e.g. dice-models/d20.glb.
+      glTF Binary (.glb) — one file per die, e.g. dice-models/d20.glb.
    2. Add a classic GLTFLoader script tag right after the three.min.js tag
       above, pointing at (cdnjs) three.js/r128/examples/js/loaders/GLTFLoader.js
    3. In DICE_CONFIG below, replace a die's `build` function to load and
       cache the .glb with THREE.GLTFLoader, then .clone() it on later rolls.
       If your model already has numbers sculpted in, you can skip
-      addFaceNumbers() for that die - but then you'll also need to tag each
+      addFaceNumbers() for that die — but then you'll also need to tag each
       face mesh's userData.value/faceNormal yourself so landing-on-result
       still works (see addFaceNumbers for the shape to match).
    ========================================================================= */
@@ -312,13 +360,13 @@ const THEME_META = {
     particles: [{ type: 'snow', count: 26, color: '#BFE0FF' }], fairy: true },
 };
 const THEME_ORDER = ['emerald', 'dragon', 'moon', 'parchment', 'frost'];
-const savedTheme = localStorage.getItem('rtb-theme');
+const savedTheme = localStorage.getItem('ff-theme');
 let currentThemeId = THEME_ORDER.includes(savedTheme) ? savedTheme : 'emerald';
 
 // ---------------------------------------------------------------------------
 // Face-finding: works on any convex polyhedron by clustering triangles that
 // share a surface normal (one cluster = one real face). -0 is normalized to
-// 0 before building the cluster key - without that, floating-point noise on
+// 0 before building the cluster key — without that, floating-point noise on
 // coordinates that are mathematically zero can split a single face into two
 // clusters, which is what caused faces with a missing or doubled number.
 // ---------------------------------------------------------------------------
@@ -402,7 +450,7 @@ function numberTexture(text, textColor, haloColor) {
   return tex;
 }
 
-// labels: array of {value, text} - one entry per real face, in cluster order.
+// labels: array of {value, text} — one entry per real face, in cluster order.
 // Also stamps userData.value / userData.faceNormal on each number plane, in
 // `mesh`'s PARENT-local frame, so rollCurrentDie() can look up "which way do
 // I need to turn to show a 7" without caring how deep the mesh is nested.
@@ -583,7 +631,7 @@ function tick() {
 tick();
 
 // ---------------------------------------------------------------------------
-// Rolling - tumble chaotically, then slerp precisely onto the face that
+// Rolling — tumble chaotically, then slerp precisely onto the face that
 // carries the rolled value so what's showing when it stops IS the result.
 // ---------------------------------------------------------------------------
 function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
@@ -685,20 +733,200 @@ function finishRoll(value, cfg, winningPlane) {
   document.getElementById('hint').textContent = isCrit ? 'Critical hit!' : isFail ? 'Fumble…' : 'Click the tray, or press Enter / Space, to roll';
 
   popHighlight(winningPlane);
-  addLogEntry(cfg.label, display, isCrit, isFail);
+  recordRoll(cfg, display, isCrit, isFail);
 }
 
-function addLogEntry(label, display, isCrit, isFail) {
-  const log = document.getElementById('log');
-  const empty = log.querySelector('.empty');
-  if (empty) empty.remove();
+// ---------------------------------------------------------------------------
+// Party — a name, a roster, and a running log of rolls + notes, saved to
+// this browser's localStorage. (Accounts / cross-device sync are a later
+// step; for now the party lives on whichever device creates it.)
+// ---------------------------------------------------------------------------
+const PARTY_KEY = 'ff-party';
+function loadParty() {
+  try { const raw = localStorage.getItem(PARTY_KEY); return raw ? JSON.parse(raw) : null; }
+  catch (e) { return null; }
+}
+function saveParty() {
+  try { localStorage.setItem(PARTY_KEY, JSON.stringify(party)); } catch (e) { /* storage unavailable */ }
+}
+function nowIso() { return new Date().toISOString(); }
+function timeLabel(iso) { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+let party = loadParty();
+let soloLog = []; // ephemeral fallback log, used only while there's no party
+
+function createParty(name) {
+  party = { name, members: [], activeMember: null, log: [{ type: 'session', time: nowIso() }] };
+  saveParty();
+  renderParty();
+}
+function addMember(name) {
+  const clean = name.trim();
+  if (!party || !clean || party.members.includes(clean)) return;
+  party.members.push(clean);
+  if (!party.activeMember) party.activeMember = clean;
+  saveParty(); renderParty();
+}
+function removeMember(name) {
+  if (!party) return;
+  party.members = party.members.filter(m => m !== name);
+  if (party.activeMember === name) party.activeMember = party.members[0] || null;
+  saveParty(); renderParty();
+}
+function setActiveMember(name) {
+  if (!party) return;
+  party.activeMember = name;
+  saveParty(); renderParty();
+}
+function newSession() {
+  if (!party) return;
+  party.log.push({ type: 'session', time: nowIso() });
+  saveParty(); renderParty();
+}
+function addNote(text) {
+  const clean = text.trim();
+  if (!party || !clean) return;
+  party.log.push({ type: 'note', member: party.activeMember, text: clean, time: nowIso() });
+  saveParty(); renderParty();
+}
+function disbandParty() {
+  if (!confirm('Disband this party? This clears its roster and log from this browser.')) return;
+  party = null;
+  localStorage.removeItem(PARTY_KEY);
+  renderParty();
+}
+
+function recordRoll(cfg, display, isCrit, isFail) {
+  if (party) {
+    party.log.push({ type: 'roll', member: party.activeMember, die: cfg.label, display, crit: !!isCrit, fail: !!isFail, time: nowIso() });
+    saveParty();
+  } else {
+    soloLog.unshift({ type: 'roll', die: cfg.label, display, crit: !!isCrit, fail: !!isFail, time: nowIso() });
+    if (soloLog.length > 8) soloLog.pop();
+  }
+  renderLedger();
+}
+
+function renderEntry(e) {
   const li = document.createElement('li');
-  if (isCrit) li.classList.add('crit');
-  if (isFail) li.classList.add('fail');
-  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  li.innerHTML = `<span>${label} · ${time}${isCrit ? ' · critical!' : ''}${isFail ? ' · fumble' : ''}</span><span class="val">${display}</span>`;
-  log.prepend(li);
-  while (log.children.length > 8) log.removeChild(log.lastChild);
+  if (e.type === 'session') {
+    li.className = 'log-session';
+    li.textContent = 'Session began · ' + timeLabel(e.time);
+    return li;
+  }
+  const who = e.member ? escapeHtml(e.member) + ' · ' : '';
+  if (e.type === 'note') {
+    li.className = 'log-note';
+    li.innerHTML = `<span>${who}“${escapeHtml(e.text)}”</span><span class="val">${timeLabel(e.time)}</span>`;
+    return li;
+  }
+  if (e.crit) li.classList.add('crit');
+  if (e.fail) li.classList.add('fail');
+  li.innerHTML = `<span>${who}${e.die} · ${timeLabel(e.time)}${e.crit ? ' · critical!' : ''}${e.fail ? ' · fumble' : ''}</span><span class="val">${e.display}</span>`;
+  return li;
+}
+
+function renderLedger() {
+  const log = document.getElementById('log');
+  const heading = document.getElementById('ledgerHeading');
+  log.innerHTML = '';
+  if (party) {
+    heading.textContent = party.name + ' — Log';
+    const entries = party.log.slice().reverse().slice(0, 40);
+    if (entries.length === 0) { log.innerHTML = '<li class="empty">No rolls yet — give it a throw.</li>'; return; }
+    entries.forEach(e => log.appendChild(renderEntry(e)));
+  } else {
+    heading.textContent = 'Roll Log';
+    if (soloLog.length === 0) { log.innerHTML = '<li class="empty">No rolls yet — give it a throw.</li>'; return; }
+    soloLog.forEach(e => log.appendChild(renderEntry(e)));
+  }
+}
+
+function buildCreateForm() {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = '<h2>Gather a Party</h2><p class="party-hint">Name your party to start logging rolls and notes together.</p>';
+  const form = document.createElement('div');
+  form.className = 'party-form';
+  const input = document.createElement('input');
+  input.type = 'text'; input.placeholder = 'Party name (e.g. The Last Lantern)'; input.maxLength = 40;
+  const btn = document.createElement('button');
+  btn.className = 'die-btn'; btn.textContent = 'Found the Party';
+  btn.addEventListener('click', () => { if (input.value.trim()) createParty(input.value.trim()); });
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
+  form.appendChild(input); form.appendChild(btn);
+  wrap.appendChild(form);
+  return wrap;
+}
+
+function buildPartyManager() {
+  const wrap = document.createElement('div');
+
+  const nameRow = document.createElement('div');
+  nameRow.className = 'party-name-row';
+  const nameEl = document.createElement('span'); nameEl.className = 'party-name'; nameEl.textContent = party.name;
+  const actions = document.createElement('div'); actions.className = 'party-actions';
+  const sessBtn = document.createElement('button'); sessBtn.className = 'link-btn'; sessBtn.textContent = 'New Session';
+  sessBtn.addEventListener('click', newSession);
+  const disbandBtn = document.createElement('button'); disbandBtn.className = 'link-btn'; disbandBtn.textContent = 'Disband';
+  disbandBtn.addEventListener('click', disbandParty);
+  actions.appendChild(sessBtn); actions.appendChild(disbandBtn);
+  nameRow.appendChild(nameEl); nameRow.appendChild(actions);
+  wrap.appendChild(nameRow);
+
+  const chipsRow = document.createElement('div');
+  chipsRow.className = 'member-chips';
+  if (party.members.length === 0) {
+    const hint = document.createElement('p');
+    hint.className = 'party-hint'; hint.style.margin = '0 0 10px'; hint.textContent = 'Add your first party member below.';
+    wrap.appendChild(hint);
+  }
+  party.members.forEach(m => {
+    const chip = document.createElement('span');
+    chip.className = 'member-chip' + (party.activeMember === m ? ' active' : '');
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'chip-name'; nameSpan.textContent = m;
+    nameSpan.title = 'Set as current roller';
+    nameSpan.addEventListener('click', () => setActiveMember(m));
+    const removeSpan = document.createElement('span');
+    removeSpan.className = 'remove'; removeSpan.textContent = '✕'; removeSpan.title = 'Remove';
+    removeSpan.addEventListener('click', ev => { ev.stopPropagation(); removeMember(m); });
+    chip.appendChild(nameSpan); chip.appendChild(removeSpan);
+    chipsRow.appendChild(chip);
+  });
+  wrap.appendChild(chipsRow);
+
+  const addRow = document.createElement('div');
+  addRow.className = 'party-form';
+  const memberInput = document.createElement('input');
+  memberInput.type = 'text'; memberInput.placeholder = 'Add a member…'; memberInput.maxLength = 24;
+  const addBtn = document.createElement('button'); addBtn.className = 'die-btn'; addBtn.textContent = 'Add';
+  addBtn.addEventListener('click', () => { if (memberInput.value.trim()) { addMember(memberInput.value.trim()); memberInput.value = ''; } });
+  memberInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); } });
+  addRow.appendChild(memberInput); addRow.appendChild(addBtn);
+  wrap.appendChild(addRow);
+
+  const noteRow = document.createElement('div');
+  noteRow.className = 'party-form';
+  const noteInput = document.createElement('input');
+  noteInput.type = 'text'; noteInput.maxLength = 200;
+  noteInput.placeholder = party.activeMember ? `Note as ${party.activeMember}…` : 'Add a note…';
+  const noteBtn = document.createElement('button'); noteBtn.className = 'die-btn'; noteBtn.textContent = 'Add Note';
+  noteBtn.addEventListener('click', () => { if (noteInput.value.trim()) { addNote(noteInput.value.trim()); noteInput.value = ''; } });
+  noteInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); noteBtn.click(); } });
+  noteRow.appendChild(noteInput); noteRow.appendChild(noteBtn);
+  wrap.appendChild(noteRow);
+
+  return wrap;
+}
+
+function renderParty() {
+  const panel = document.getElementById('partyPanel');
+  panel.innerHTML = '';
+  panel.appendChild(party ? buildPartyManager() : buildCreateForm());
+  renderLedger();
 }
 
 // ---------------------------------------------------------------------------
@@ -720,7 +948,7 @@ DICE_ORDER.forEach(type => {
     if (rolling) return;
     currentType = type;
     mountDie(type);
-    document.getElementById('resultHud').innerHTML = '-';
+    document.getElementById('resultHud').innerHTML = '—';
     document.getElementById('resultHud').classList.remove('crit', 'fail');
     document.getElementById('trayWrap').classList.remove('crit', 'fail');
     document.getElementById('hint').textContent = 'Click the tray, or press Enter / Space, to roll';
@@ -737,7 +965,7 @@ tray.addEventListener('click', rollCurrentDie);
 tray.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rollCurrentDie(); } });
 
 // ---------------------------------------------------------------------------
-// Fantasy backdrops - procedural, layered, and re-drawn per theme
+// Fantasy backdrops — procedural, layered, and re-drawn per theme
 // ---------------------------------------------------------------------------
 const SVGNS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs) {
@@ -909,13 +1137,13 @@ function buildAmbience(themeId) {
 function applyTheme(themeId) {
   currentThemeId = themeId;
   document.documentElement.setAttribute('data-theme', themeId);
-  localStorage.setItem('rtb-theme', themeId);
+  localStorage.setItem('ff-theme', themeId);
   const meta = THEME_META[themeId];
   torch.color.setHex(meta.torch);
   rimLight.color.setHex(meta.rim);
   buildAmbience(themeId);
   mountDie(currentType);
-  document.getElementById('resultHud').innerHTML = '-';
+  document.getElementById('resultHud').innerHTML = '—';
   document.getElementById('resultHud').classList.remove('crit', 'fail');
   document.getElementById('trayWrap').classList.remove('crit', 'fail');
   document.getElementById('hint').textContent = 'Click the tray, or press Enter / Space, to roll';
@@ -943,6 +1171,7 @@ THEME_ORDER.forEach(id => {
 });
 
 applyTheme(currentThemeId);
+renderParty();
 </script>
 </body>
 </html>
