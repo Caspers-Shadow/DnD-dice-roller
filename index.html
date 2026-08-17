@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>The Faerie's Fortune - Dice Tray</title>
+<title>Roll the Bones — Dice Tray</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -78,7 +78,6 @@
     position: relative; overflow-x: hidden;
   }
 
-  /* ---- ambience: fixed behind everything, rebuilt on each theme switch ---- */
   #ambience { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
   .landscape-layer { position: absolute; left: -4%; right: -4%; bottom: 0; width: 108%; height: 28vh; min-height: 175px; }
   .landscape-back { filter: blur(2.5px); opacity: 0.55; animation: driftSlow 46s ease-in-out infinite alternate; }
@@ -171,6 +170,7 @@
     color: var(--ink); background: linear-gradient(180deg, var(--accent-bright), var(--accent-dark));
     border-color: var(--accent-bright); box-shadow: 0 0 18px rgba(232,199,122,0.3);
   }
+  .die-btn:disabled, .theme-swatch:disabled { opacity: 0.5; cursor: default; }
 
   .tray-wrap { position: relative; width: min(100%, 460px); aspect-ratio: 1 / 1; }
   .tray-rim {
@@ -266,10 +266,14 @@
 /* =========================================================================
    ROLL THE BONES — 3D dice tray
    -------------------------------------------------------------------------
-   Every die is placeholder Three.js geometry with real printed numerals on
-   every face (found by clustering triangles that share a normal, so it
-   works for any convex die shape without hand-mapped UVs). Colors stay
-   fixed across table themes — a real dice set doesn't change with the room.
+   Every die is placeholder Three.js geometry. Each real face gets exactly
+   one printed numeral (faces are found by clustering triangles that share
+   a surface normal, so this works on any convex shape without hand-mapped
+   UVs). When you roll, the die's final orientation is computed so the
+   face carrying the chosen result ends up turned toward the viewer — the
+   number showing IS the result, not a coincidence — and that face gets a
+   quick highlight pop once it settles. Dice gem colors follow the current
+   table theme.
 
    SWAPPING IN YOUR OWN BLENDER DICE
    ----------------------------------
@@ -278,18 +282,52 @@
    2. Add a classic GLTFLoader script tag right after the three.min.js tag
       above, pointing at (cdnjs) three.js/r128/examples/js/loaders/GLTFLoader.js
    3. In DICE_CONFIG below, replace a die's `build` function to load and
-      cache the .glb with THREE.GLTFLoader, then .clone() it on later rolls
-      so the file is only fetched once. If your model already has numbers
-      sculpted or painted on, skip the addFaceNumbers() call for that die.
+      cache the .glb with THREE.GLTFLoader, then .clone() it on later rolls.
+      If your model already has numbers sculpted in, you can skip
+      addFaceNumbers() for that die — but then you'll also need to tag each
+      face mesh's userData.value/faceNormal yourself so landing-on-result
+      still works (see addFaceNumbers for the shape to match).
    ========================================================================= */
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------------------------------------------------------------------------
-// Face-numbering: works on any convex polyhedron by clustering triangles
-// that share a normal (one cluster = one real face), then stamping a small
-// unlit number plane at that face's centroid, parented so it spins with it.
+// Table themes (also drive dice gem colors, so the whole set matches)
 // ---------------------------------------------------------------------------
+const THEME_META = {
+  emerald:   { name: 'Emerald Table',    swatch: ['#1B3A2F', '#E8C77A'], torch: 0xffcf99, rim: 0xbcd4ff,
+    dice: { d4: 0xA5453A, d6base: '#EFE3C8', d8: 0x2F6B4F, d10: 0xC9A356, d12: 0x5B3E8C, d20: 0xE8B93E },
+    particles: [{ type: 'firefly', count: 16, color: '#E8C77A' }] },
+  dragon:    { name: 'Dragonfire Hoard', swatch: ['#3B1414', '#FBD98A'], torch: 0xff8a50, rim: 0xff5a3c,
+    dice: { d4: 0xE8532E, d6base: '#F6E2C8', d8: 0x8C2A1E, d10: 0xE8B93E, d12: 0x7A2E17, d20: 0xFFD24A },
+    particles: [{ type: 'ember', count: 16, color: '#FF7A3D' }, { type: 'smoke', count: 5, color: 'rgba(140,90,70,0.28)' }] },
+  moon:      { name: 'Ninth Moon',       swatch: ['#16213A', '#E4ECFB'], torch: 0xbcd4ff, rim: 0xe4ecfb,
+    dice: { d4: 0x5B6FA8, d6base: '#E7EDFB', d8: 0x2E3B63, d10: 0x8FA3C4, d12: 0x3A2E63, d20: 0xB9C9EA },
+    particles: [{ type: 'star', count: 24, color: '#E4ECFB' }], fairy: true },
+  parchment: { name: 'Sunlit Parchment', swatch: ['#D3A272', '#8C5A1E'], torch: 0xffe0a0, rim: 0xffcf8a,
+    dice: { d4: 0xB5622E, d6base: '#FBF3E1', d8: 0x6E7A3E, d10: 0xC98F3E, d12: 0x8C5A1E, d20: 0xE0A93E },
+    particles: [{ type: 'mote', count: 14, color: '#F0C987' }] },
+  frost:     { name: 'Frostspire',       swatch: ['#A8C8E0', '#5D7E97'], torch: 0xdff0ff, rim: 0xffffff,
+    dice: { d4: 0x6E9EC9, d6base: '#F3F9FF', d8: 0x3D6E8C, d10: 0x8FB3D6, d12: 0x4E6FA8, d20: 0xBFE0FF },
+    particles: [{ type: 'snow', count: 26, color: '#BFE0FF' }], fairy: true },
+};
+const THEME_ORDER = ['emerald', 'dragon', 'moon', 'parchment', 'frost'];
+const savedTheme = localStorage.getItem('rtb-theme');
+let currentThemeId = THEME_ORDER.includes(savedTheme) ? savedTheme : 'emerald';
+
+// ---------------------------------------------------------------------------
+// Face-finding: works on any convex polyhedron by clustering triangles that
+// share a surface normal (one cluster = one real face). -0 is normalized to
+// 0 before building the cluster key — without that, floating-point noise on
+// coordinates that are mathematically zero can split a single face into two
+// clusters, which is what caused faces with a missing or doubled number.
+// ---------------------------------------------------------------------------
+function roundKey(n) {
+  let r = Math.round(n * 100) / 100;
+  if (Math.abs(r) < 0.005) r = 0; // snap -0 and float jitter near zero to a single value
+  return r.toFixed(2);
+}
+
 function readTriangle(geometry, triIndex) {
   const pos = geometry.attributes.position;
   if (geometry.index) {
@@ -315,7 +353,7 @@ function findFaces(geometry) {
   for (let t = 0; t < triCount; t++) {
     const [v0, v1, v2] = readTriangle(geometry, t);
     const normal = new THREE.Vector3().subVectors(v1, v0).cross(new THREE.Vector3().subVectors(v2, v0)).normalize();
-    const key = normal.x.toFixed(2) + ',' + normal.y.toFixed(2) + ',' + normal.z.toFixed(2);
+    const key = roundKey(normal.x) + ',' + roundKey(normal.y) + ',' + roundKey(normal.z);
     if (!clusters.has(key)) clusters.set(key, { normalSum: new THREE.Vector3(), points: new Map() });
     const cluster = clusters.get(key);
     cluster.normalSum.add(normal);
@@ -337,47 +375,64 @@ function findFaces(geometry) {
   return faces;
 }
 
-function numberTexture(value, textColor, haloColor) {
+function numberTexture(text, textColor, haloColor) {
   const size = 128;
   const c = document.createElement('canvas');
   c.width = c.height = size;
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, size, size);
-  ctx.font = '900 76px Georgia, serif';
+  ctx.font = '900 72px Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineWidth = 9;
   ctx.strokeStyle = haloColor;
   ctx.fillStyle = textColor;
-  ctx.strokeText(String(value), size / 2, size / 2 + 4);
-  ctx.fillText(String(value), size / 2, size / 2 + 4);
+  ctx.strokeText(text, size / 2, size / 2 + 2);
+  ctx.fillText(text, size / 2, size / 2 + 2);
+  if (text === '6' || text === '9') { // underline so a spinning 6 can't read as a 9
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = textColor;
+    ctx.beginPath();
+    ctx.moveTo(size / 2 - 15, size / 2 + 32);
+    ctx.lineTo(size / 2 + 15, size / 2 + 32);
+    ctx.stroke();
+  }
   const tex = new THREE.CanvasTexture(c);
   tex.anisotropy = 4;
   return tex;
 }
 
-function addFaceNumbers(mesh, geometry, planeSize, textColor, haloColor, startAt = 1) {
+// labels: array of {value, text} — one entry per real face, in cluster order.
+// Also stamps userData.value / userData.faceNormal on each number plane, in
+// `mesh`'s PARENT-local frame, so rollCurrentDie() can look up "which way do
+// I need to turn to show a 7" without caring how deep the mesh is nested.
+function addFaceNumbers(mesh, geometry, planeSize, textColor, haloColor, labels) {
   const faces = findFaces(geometry);
   faces.forEach((face, i) => {
-    const tex = numberTexture(startAt + i, textColor, haloColor);
+    const label = labels[i % labels.length];
+    const tex = numberTexture(label.text, textColor, haloColor);
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, alphaTest: 0.05, side: THREE.DoubleSide });
     const plane = new THREE.Mesh(new THREE.PlaneGeometry(planeSize, planeSize), mat);
     plane.position.copy(face.centroid).addScaledVector(face.normal, 0.012);
     plane.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), face.normal);
+    plane.userData.value = label.value;
+    plane.userData.faceNormal = face.normal.clone().applyQuaternion(mesh.quaternion);
     mesh.add(plane);
   });
 }
 
+function seqLabels(a, b) { const out = []; for (let i = a; i <= b; i++) out.push({ value: i, text: String(i) }); return out; }
+
 // ---------------------------------------------------------------------------
 // Dice geometry (placeholders, ready to be swapped for Blender exports)
 // ---------------------------------------------------------------------------
-function pipTexture(pips) {
+function pipTexture(pips, baseColor) {
   const layout = { 1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8] }[pips];
   const size = 128;
   const c = document.createElement('canvas');
   c.width = c.height = size;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#EFE3C8';
+  ctx.fillStyle = baseColor;
   ctx.fillRect(0, 0, size, size);
   ctx.strokeStyle = 'rgba(0,0,0,0.15)';
   ctx.lineWidth = 4;
@@ -395,12 +450,23 @@ function pipTexture(pips) {
 }
 
 function buildD6() {
+  const base = THEME_META[currentThemeId].dice.d6base;
   const order = [1, 6, 2, 5, 3, 4]; // +x -x +y -y +z -z, opposite faces sum to 7
-  const mats = order.map(n => new THREE.MeshStandardMaterial({ map: pipTexture(n), roughness: 0.55, metalness: 0.05 }));
-  return new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.95), mats);
+  const mats = order.map(n => new THREE.MeshStandardMaterial({ map: pipTexture(n, base), roughness: 0.55, metalness: 0.05 }));
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.95), mats);
+  const normals = { 1:[1,0,0], 6:[-1,0,0], 2:[0,1,0], 5:[0,-1,0], 3:[0,0,1], 4:[0,0,-1] };
+  Object.keys(normals).forEach(val => {
+    const marker = new THREE.Object3D();
+    marker.userData.value = Number(val);
+    marker.userData.faceNormal = new THREE.Vector3(...normals[val]);
+    mesh.add(marker);
+  });
+  return mesh;
 }
-function gemMaterial(color, emissive, metalness = 0.35, roughness = 0.35) {
-  return new THREE.MeshStandardMaterial({ color, emissive, emissiveIntensity: 0.18, metalness, roughness });
+
+function gemMaterial(colorHex, metalness = 0.35, roughness = 0.35) {
+  const c = new THREE.Color(colorHex);
+  return new THREE.MeshStandardMaterial({ color: c, emissive: c.clone().multiplyScalar(0.12), metalness, roughness });
 }
 
 const IVORY = '#F3E3D2', IVORY_HALO = 'rgba(15,10,10,0.6)';
@@ -408,39 +474,47 @@ const INK = '#241608', INK_HALO = 'rgba(255,250,235,0.65)';
 
 function buildD4() {
   const geo = new THREE.TetrahedronGeometry(0.72);
-  const mesh = new THREE.Mesh(geo, gemMaterial(0xA5453A, 0x2a0f0a));
-  addFaceNumbers(mesh, geo, 0.34, IVORY, IVORY_HALO);
+  const mesh = new THREE.Mesh(geo, gemMaterial(THEME_META[currentThemeId].dice.d4));
+  addFaceNumbers(mesh, geo, 0.3, IVORY, IVORY_HALO, seqLabels(1, 4));
   return mesh;
 }
 function buildD8() {
   const geo = new THREE.OctahedronGeometry(0.68);
-  const mesh = new THREE.Mesh(geo, gemMaterial(0x2F6B4F, 0x0c1f16));
-  addFaceNumbers(mesh, geo, 0.27, IVORY, IVORY_HALO);
+  const mesh = new THREE.Mesh(geo, gemMaterial(THEME_META[currentThemeId].dice.d8));
+  addFaceNumbers(mesh, geo, 0.24, IVORY, IVORY_HALO, seqLabels(1, 8));
   return mesh;
-}
-function buildD10() {
-  const group = new THREE.Group();
-  const mat = gemMaterial(0xC9A356, 0x3a2c11, 0.55, 0.3);
-  const top = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.62, 5, 1, true), mat);
-  top.position.y = 0.31;
-  addFaceNumbers(top, top.geometry, 0.2, INK, INK_HALO, 1);
-  const bottom = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.62, 5, 1, true), mat);
-  bottom.position.y = -0.31; bottom.rotation.x = Math.PI; bottom.rotation.y = Math.PI / 5;
-  addFaceNumbers(bottom, bottom.geometry, 0.2, INK, INK_HALO, 6);
-  group.add(top, bottom);
-  return group;
 }
 function buildD12() {
   const geo = new THREE.DodecahedronGeometry(0.66);
-  const mesh = new THREE.Mesh(geo, gemMaterial(0x5B3E8C, 0x160f2b));
-  addFaceNumbers(mesh, geo, 0.3, IVORY, IVORY_HALO);
+  const mesh = new THREE.Mesh(geo, gemMaterial(THEME_META[currentThemeId].dice.d12));
+  addFaceNumbers(mesh, geo, 0.26, IVORY, IVORY_HALO, seqLabels(1, 12));
   return mesh;
 }
 function buildD20() {
   const geo = new THREE.IcosahedronGeometry(0.68);
-  const mesh = new THREE.Mesh(geo, gemMaterial(0xE8B93E, 0x3a2c06, 0.5, 0.25));
-  addFaceNumbers(mesh, geo, 0.2, INK, INK_HALO);
+  const mesh = new THREE.Mesh(geo, gemMaterial(THEME_META[currentThemeId].dice.d20, 0.5, 0.25));
+  addFaceNumbers(mesh, geo, 0.17, INK, INK_HALO, seqLabels(1, 20));
   return mesh;
+}
+function buildBipyramid(colorHex, labelsTop, labelsBottom) {
+  const group = new THREE.Group();
+  const mat = gemMaterial(colorHex, 0.55, 0.3);
+  const top = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.62, 5, 1, true), mat);
+  top.position.y = 0.31;
+  addFaceNumbers(top, top.geometry, 0.18, INK, INK_HALO, labelsTop);
+  const bottom = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.62, 5, 1, true), mat);
+  bottom.position.y = -0.31; bottom.rotation.x = Math.PI; bottom.rotation.y = Math.PI / 5;
+  addFaceNumbers(bottom, bottom.geometry, 0.18, INK, INK_HALO, labelsBottom);
+  group.add(top, bottom);
+  return group;
+}
+function buildD10() {
+  return buildBipyramid(THEME_META[currentThemeId].dice.d10, seqLabels(1, 5), seqLabels(6, 10));
+}
+function buildD100() {
+  const top = [0, 10, 20, 30, 40].map(v => ({ value: v, text: String(v) }));
+  const bottom = [50, 60, 70, 80, 90].map(v => ({ value: v, text: String(v) }));
+  return buildBipyramid(THEME_META[currentThemeId].dice.d10, top, bottom);
 }
 
 const DICE_CONFIG = {
@@ -450,7 +524,7 @@ const DICE_CONFIG = {
   d10: { label: 'd10', build: buildD10, results: range(1, 10) },
   d12: { label: 'd12', build: buildD12, results: range(1, 12) },
   d20: { label: 'd20', build: buildD20, results: range(1, 20), critical: true },
-  d100:{ label: 'd%',  build: buildD10, results: range(0, 9).map(n => n * 10), suffix: '%' },
+  d100:{ label: 'd%',  build: buildD100, results: range(0, 9).map(n => n * 10), suffix: '%' },
 };
 const DICE_ORDER = ['d4','d6','d8','d10','d12','d20','d100'];
 function range(a, b) { const out = []; for (let i = a; i <= b; i++) out.push(i); return out; }
@@ -466,6 +540,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 20);
 camera.position.set(0, 3.1, 3.4);
 camera.lookAt(0, 0, 0);
+const REVEAL_DIR = camera.position.clone().normalize(); // the direction a face should point to read clearly
 
 scene.add(new THREE.AmbientLight(0x8899aa, 0.55));
 const torch = new THREE.PointLight(0xffbf80, 1.4, 8, 2);
@@ -483,9 +558,9 @@ function mountDie(type) {
   if (dieObj) scene.remove(dieObj);
   dieObj = DICE_CONFIG[type].build();
   dieObj.rotation.set(0.4, 0.6, 0.1);
+  dieObj.scale.setScalar(1);
   scene.add(dieObj);
 }
-mountDie(currentType);
 
 function resize() {
   const wrap = document.getElementById('trayWrap');
@@ -508,13 +583,32 @@ function tick() {
 tick();
 
 // ---------------------------------------------------------------------------
-// Rolling — one rAF pass drives rotation and hop together
+// Rolling — tumble chaotically, then slerp precisely onto the face that
+// carries the rolled value so what's showing when it stops IS the result.
 // ---------------------------------------------------------------------------
 function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
+
+function findTarget(root, value) {
+  let normal = null, plane = null;
+  root.traverse(o => { if (o.userData && o.userData.value === value) { normal = o.userData.faceNormal; plane = o; } });
+  return { normal, plane };
+}
+
+function popHighlight(plane) {
+  if (!plane || reducedMotion) return;
+  const start = performance.now(), dur = 380;
+  function f(now) {
+    const p = Math.min((now - start) / dur, 1);
+    plane.scale.setScalar(1 + Math.sin(p * Math.PI) * 0.5);
+    if (p < 1) requestAnimationFrame(f); else plane.scale.setScalar(1);
+  }
+  requestAnimationFrame(f);
+}
 
 function rollCurrentDie() {
   if (rolling || !dieObj) return;
   rolling = true;
+  setControlsEnabled(false);
   document.getElementById('trayWrap').classList.remove('crit', 'fail');
   const hud = document.getElementById('resultHud');
   hud.classList.remove('crit', 'fail');
@@ -523,29 +617,60 @@ function rollCurrentDie() {
 
   const cfg = DICE_CONFIG[currentType];
   const finalValue = cfg.results[Math.floor(Math.random() * cfg.results.length)];
+  const target = findTarget(dieObj, finalValue);
+  const targetNormal = (target.normal || new THREE.Vector3(0, 1, 0)).clone().normalize();
+  const targetQuat = new THREE.Quaternion().setFromUnitVectors(targetNormal, REVEAL_DIR);
 
-  const spins = { x: 3 + Math.random() * 3, y: 4 + Math.random() * 3, z: 2 + Math.random() * 2 };
+  if (reducedMotion) {
+    dieObj.quaternion.copy(targetQuat);
+    dieObj.position.y = 0;
+    finishRoll(finalValue, cfg, target.plane);
+    rolling = false;
+    setControlsEnabled(true);
+    return;
+  }
+
   const startRot = dieObj.rotation.clone();
-  const duration = reducedMotion ? 200 : 950;
+  const spins = { x: 2 + Math.random() * 2, y: 3 + Math.random() * 2, z: 1 + Math.random() * 1.5 };
+  const totalDuration = 1100;
+  const tumbleDuration = totalDuration * 0.6;
+  const settleDuration = totalDuration - tumbleDuration;
   const start = performance.now();
+  let phase2StartQuat = null;
 
   function frame(now) {
-    const p = Math.min((now - start) / duration, 1);
-    const spin = easeOutCubic(p);
-    dieObj.rotation.x = startRot.x + spins.x * Math.PI * 2 * spin;
-    dieObj.rotation.y = startRot.y + spins.y * Math.PI * 2 * spin;
-    dieObj.rotation.z = startRot.z + spins.z * Math.PI * 2 * spin;
-    const hop = reducedMotion ? 0 : Math.sin(Math.min(p, 1) * Math.PI) * 0.55 * (1 - p * 0.3);
-    dieObj.position.y = hop;
+    const elapsed = now - start;
+    const hopP = Math.min(elapsed / totalDuration, 1);
+    dieObj.position.y = Math.sin(hopP * Math.PI) * 0.55 * (1 - hopP * 0.3);
 
-    if (p < 1) requestAnimationFrame(frame);
-    else { dieObj.position.y = 0; finishRoll(finalValue, cfg); }
+    if (elapsed < tumbleDuration) {
+      const p = easeOutCubic(Math.min((elapsed / tumbleDuration) * 1.1, 1));
+      dieObj.rotation.x = startRot.x + spins.x * Math.PI * 2 * p;
+      dieObj.rotation.y = startRot.y + spins.y * Math.PI * 2 * p;
+      dieObj.rotation.z = startRot.z + spins.z * Math.PI * 2 * p;
+      requestAnimationFrame(frame);
+    } else {
+      if (!phase2StartQuat) phase2StartQuat = dieObj.quaternion.clone();
+      const p2 = Math.min((elapsed - tumbleDuration) / settleDuration, 1);
+      const eased = easeOutCubic(p2);
+      dieObj.quaternion.slerpQuaternions(phase2StartQuat, targetQuat, eased);
+      dieObj.scale.setScalar(1 + Math.sin(p2 * Math.PI) * 0.05);
+      if (p2 < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        dieObj.quaternion.copy(targetQuat);
+        dieObj.scale.setScalar(1);
+        dieObj.position.y = 0;
+        finishRoll(finalValue, cfg, target.plane);
+        rolling = false;
+        setControlsEnabled(true);
+      }
+    }
   }
   requestAnimationFrame(frame);
 }
 
-function finishRoll(value, cfg) {
-  rolling = false;
+function finishRoll(value, cfg, winningPlane) {
   const display = value + (cfg.suffix || '');
   const isCrit = cfg.critical && value === Math.max(...cfg.results);
   const isFail = cfg.critical && value === Math.min(...cfg.results);
@@ -559,6 +684,7 @@ function finishRoll(value, cfg) {
   wrap.classList.toggle('fail', isFail);
   document.getElementById('hint').textContent = isCrit ? 'Critical hit!' : isFail ? 'Fumble…' : 'Click the tray, or press Enter / Space, to roll';
 
+  popHighlight(winningPlane);
   addLogEntry(cfg.label, display, isCrit, isFail);
 }
 
@@ -576,8 +702,13 @@ function addLogEntry(label, display, isCrit, isFail) {
 }
 
 // ---------------------------------------------------------------------------
-// Dice tabs
+// Dice tabs + theme swatches get disabled mid-roll so a switch can't yank
+// the die out from under an in-flight animation.
 // ---------------------------------------------------------------------------
+function setControlsEnabled(enabled) {
+  document.querySelectorAll('.die-btn, .theme-swatch').forEach(b => { b.disabled = !enabled; });
+}
+
 const selectEl = document.getElementById('diceSelect');
 DICE_ORDER.forEach(type => {
   const btn = document.createElement('button');
@@ -617,7 +748,6 @@ function el(tag, attrs) {
 function landscapeSVG(cls) {
   return el('svg', { class: 'landscape-layer ' + cls, viewBox: '0 0 1200 220', preserveAspectRatio: 'none' });
 }
-
 function pineTree(x, baseY, scale, color) {
   const g = el('g', { transform: `translate(${x},${baseY}) scale(${scale})` });
   g.appendChild(el('rect', { x: -4, y: -14, width: 8, height: 16, fill: '#3b2a1a' }));
@@ -733,23 +863,6 @@ function buildLandscape(themeId, container) {
   container.appendChild(front);
 }
 
-// ---------------------------------------------------------------------------
-// Table themes
-// ---------------------------------------------------------------------------
-const THEME_META = {
-  emerald:   { name: 'Emerald Table',    swatch: ['#1B3A2F', '#E8C77A'], torch: 0xffcf99, rim: 0xbcd4ff,
-    particles: [{ type: 'firefly', count: 16, color: '#E8C77A' }] },
-  dragon:    { name: 'Dragonfire Hoard', swatch: ['#3B1414', '#FBD98A'], torch: 0xff8a50, rim: 0xff5a3c,
-    particles: [{ type: 'ember', count: 16, color: '#FF7A3D' }, { type: 'smoke', count: 5, color: 'rgba(140,90,70,0.28)' }] },
-  moon:      { name: 'Ninth Moon',       swatch: ['#16213A', '#E4ECFB'], torch: 0xbcd4ff, rim: 0xe4ecfb,
-    particles: [{ type: 'star', count: 24, color: '#E4ECFB' }], fairy: true },
-  parchment: { name: 'Sunlit Parchment', swatch: ['#D3A272', '#8C5A1E'], torch: 0xffe0a0, rim: 0xffcf8a,
-    particles: [{ type: 'mote', count: 14, color: '#F0C987' }] },
-  frost:     { name: 'Frostspire',       swatch: ['#A8C8E0', '#5D7E97'], torch: 0xdff0ff, rim: 0xffffff,
-    particles: [{ type: 'snow', count: 26, color: '#BFE0FF' }], fairy: true },
-};
-const THEME_ORDER = ['emerald', 'dragon', 'moon', 'parchment', 'frost'];
-
 function buildAmbience(themeId) {
   const wrap = document.getElementById('ambience');
   wrap.innerHTML = '';
@@ -788,28 +901,37 @@ function buildAmbience(themeId) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Apply a theme: re-tint the lights, redraw the backdrop, and rebuild the
+// current die in the new palette. Single entry point, used on load and on
+// every swatch click.
+// ---------------------------------------------------------------------------
 function applyTheme(themeId) {
+  currentThemeId = themeId;
   document.documentElement.setAttribute('data-theme', themeId);
   localStorage.setItem('rtb-theme', themeId);
   const meta = THEME_META[themeId];
   torch.color.setHex(meta.torch);
   rimLight.color.setHex(meta.rim);
   buildAmbience(themeId);
+  mountDie(currentType);
+  document.getElementById('resultHud').innerHTML = '—';
+  document.getElementById('resultHud').classList.remove('crit', 'fail');
+  document.getElementById('trayWrap').classList.remove('crit', 'fail');
+  document.getElementById('hint').textContent = 'Click the tray, or press Enter / Space, to roll';
 }
 
 const themeSelectEl = document.getElementById('themeSelect');
-const savedTheme = localStorage.getItem('rtb-theme');
-const initialTheme = THEME_ORDER.includes(savedTheme) ? savedTheme : 'emerald';
-
 THEME_ORDER.forEach(id => {
   const meta = THEME_META[id];
   const btn = document.createElement('button');
-  btn.className = 'theme-swatch' + (id === initialTheme ? ' active' : '');
+  btn.className = 'theme-swatch' + (id === currentThemeId ? ' active' : '');
   btn.style.background = `linear-gradient(135deg, ${meta.swatch[0]}, ${meta.swatch[1]})`;
   btn.title = meta.name;
   btn.setAttribute('aria-label', meta.name);
-  btn.setAttribute('aria-pressed', id === initialTheme ? 'true' : 'false');
+  btn.setAttribute('aria-pressed', id === currentThemeId ? 'true' : 'false');
   btn.addEventListener('click', () => {
+    if (rolling) return;
     applyTheme(id);
     [...themeSelectEl.querySelectorAll('.theme-swatch')].forEach(b => {
       const active = b === btn;
@@ -820,7 +942,7 @@ THEME_ORDER.forEach(id => {
   themeSelectEl.appendChild(btn);
 });
 
-applyTheme(initialTheme);
+applyTheme(currentThemeId);
 </script>
 </body>
 </html>
