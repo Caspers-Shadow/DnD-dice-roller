@@ -109,7 +109,7 @@ The project is currently designed as a static website and does not require a bac
 
 Because this is a static website, no build process is required.
 
-### Option 1 — Open locally
+### Option 1 - Open locally
 
 Clone the repository:
 
@@ -125,7 +125,7 @@ index.html
 
 in a web browser.
 
-### Option 2 — GitHub Pages
+### Option 2 - GitHub Pages
 
 The project can be deployed directly using GitHub Pages.
 
