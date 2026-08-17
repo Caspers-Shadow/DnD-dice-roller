@@ -7,7 +7,7 @@ Roll your dice, keep track of your results, and customise your gaming table with
 The project is currently a **client-side web application**, with plans to expand it into a multiplayer tabletop companion for players and Dungeon Masters.
 
 ```bash
-https://caspers-shadow.github.io/DnD-dice-roller/
+https://caspers-shadow.github.io/The-Faerie-s-Fortune/
 ```
 
 ---
