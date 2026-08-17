@@ -13,5 +13,5 @@
    party on the browser that created it instead of syncing to an account.
    ========================================================================= */
 
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_URL = 'https://supabase.com/dashboard/project/lltbiuhhqzcrxdnlzlre/sql/575724ad-ee16-4295-ad47-d9bb759725a2';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsdGJpdWhocXpjcnhkbmx6bHJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5OTM3NzgsImV4cCI6MjEwMjU2OTc3OH0.gEzap0G2hkFZUzQBwAJSLWkK1vJWEQYt1cD4SxGCwu8';
