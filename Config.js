@@ -14,4 +14,4 @@
    ========================================================================= */
 
 const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsdGJpdWhocXpjcnhkbmx6bHJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5OTM3NzgsImV4cCI6MjEwMjU2OTc3OH0.gEzap0G2hkFZUzQBwAJSLWkK1vJWEQYt1cD4SxGCwu8';
