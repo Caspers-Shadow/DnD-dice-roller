@@ -34,10 +34,15 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   const password = document.getElementById('loginPassword').value;
   if (!email || !password) { statusEl.textContent = 'Enter your email and password.'; return; }
   busy = true; statusEl.textContent = 'Signing in…';
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  busy = false;
-  if (error) { statusEl.textContent = error.message; return; }
-  window.location.href = 'dashboard.html';
+  try {
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) { statusEl.textContent = error.message; return; }
+    window.location.href = 'dashboard.html';
+  } catch (err) {
+    statusEl.textContent = 'Something went wrong: ' + (err && err.message ? err.message : String(err));
+  } finally {
+    busy = false;
+  }
 });
 
 document.getElementById('signupBtn').addEventListener('click', async () => {
@@ -46,16 +51,22 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
   const email = document.getElementById('signupEmail').value.trim();
   const password = document.getElementById('signupPassword').value;
   if (!name || !email || !password) { statusEl.textContent = 'Fill in your name, email, and a password.'; return; }
+  if (password.length < 6) { statusEl.textContent = 'Password needs to be at least 6 characters.'; return; }
   busy = true; statusEl.textContent = 'Creating your account…';
-  const { data, error } = await supabaseClient.auth.signUp({
-    email, password, options: { data: { display_name: name } }
-  });
-  busy = false;
-  if (error) { statusEl.textContent = error.message; return; }
-  if (data.session) {
-    window.location.href = 'dashboard.html';
-  } else {
-    statusEl.textContent = 'Check your email to confirm your account, then log in.';
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
+      email, password, options: { data: { display_name: name } }
+    });
+    if (error) { statusEl.textContent = error.message; return; }
+    if (data.session) {
+      window.location.href = 'dashboard.html';
+    } else {
+      statusEl.textContent = 'Check your email to confirm your account, then log in.';
+    }
+  } catch (err) {
+    statusEl.textContent = 'Something went wrong: ' + (err && err.message ? err.message : String(err));
+  } finally {
+    busy = false;
   }
 });
 
