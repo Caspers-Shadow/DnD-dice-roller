@@ -269,3 +269,41 @@
   .auth-who { color: var(--accent-bright); }
   .auth-form input { min-width: 130px; }
   .auth-status { min-height: 16px; margin: 6px 0 0; }
+
+  /* ---- auth / dashboard pages (no ambience canvas, just a centered card) ---- */
+  body.auth-page { align-items: flex-start; padding-top: 64px; }
+  .stage-narrow { max-width: 480px; }
+  .gate-message { text-align: center; padding: 80px 20px; color: var(--text); }
+
+  .auth-card {
+    width: 100%; background: linear-gradient(180deg, var(--panel-a), var(--panel-b));
+    border: 1px solid var(--accent-dark); border-radius: 12px; padding: 22px 24px;
+  }
+  .auth-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .auth-tab {
+    flex: 1; font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--text-dim); background: rgba(0,0,0,0.15); border: 1px solid var(--accent-dark);
+    border-radius: 8px; padding: 9px 0; cursor: pointer;
+  }
+  .auth-tab.active { color: var(--ink); background: linear-gradient(180deg, var(--accent-bright), var(--accent-dark)); border-color: var(--accent-bright); }
+  .auth-card input[type="email"], .auth-card input[type="password"], .auth-card input[type="text"] {
+    background: rgba(0,0,0,0.18); border: 1px solid var(--accent-dark); border-radius: 8px;
+    padding: 10px 12px; color: var(--text); font-family: var(--body); font-size: 14px;
+  }
+  .auth-card .party-form { gap: 10px; }
+
+  .back-link { color: var(--accent); text-decoration: none; }
+  .back-link:hover { color: var(--accent-bright); }
+
+  .party-row-link {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(0,0,0,0.15); border: 1px solid var(--accent-dark); border-radius: 10px;
+    padding: 12px 14px; text-decoration: none; margin-bottom: 8px;
+  }
+  .party-row-link:hover { border-color: var(--accent); }
+  .party-row-name { font-family: var(--display); font-weight: 700; color: var(--text); }
+  .party-row-badge {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: 999px; border: 1px solid var(--accent-dark); color: var(--text-dim);
+  }
+  .party-row-badge.dm { color: var(--ink); background: linear-gradient(180deg, var(--accent-bright), var(--accent-dark)); border-color: var(--accent-bright); }
