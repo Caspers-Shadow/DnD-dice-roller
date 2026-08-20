@@ -28,7 +28,7 @@ let currentSessionId = null;
   party = partyRow;
 
   document.getElementById('partyTitle').innerHTML = escapeHtml(party.name) + ' <span>· ' + (myRole === 'dm' ? 'DM' : 'Player') + '</span>';
-  document.title = party.name + ' — The Faerie\'s Fortune';
+  document.title = party.name + ' - The Faerie\'s Fortune';
 
   await ensureSession();
   await renderPartyInfo();
@@ -80,7 +80,7 @@ async function renderPartyInfo() {
   if (myRole === 'dm') {
     const inviteRow = document.createElement('p');
     inviteRow.className = 'party-hint';
-    inviteRow.innerHTML = 'Invite code: <strong style="letter-spacing:0.1em; color:var(--accent-bright);">' + escapeHtml(party.invite_code) + '</strong> — share it so players can join.';
+    inviteRow.innerHTML = 'Invite code: <strong style="letter-spacing:0.1em; color:var(--accent-bright);">' + escapeHtml(party.invite_code) + '</strong> - share it so players can join.';
     panel.appendChild(inviteRow);
   }
 }
@@ -94,7 +94,7 @@ async function startNewSession() {
 }
 
 // ---------------------------------------------------------------------------
-// Log — rolls, notes, and session dividers, newest first
+// Log - rolls, notes, and session dividers, newest first
 // ---------------------------------------------------------------------------
 async function refreshLog() {
   const log = document.getElementById('log');
@@ -106,7 +106,7 @@ async function refreshLog() {
     .limit(60);
 
   if (error) { log.innerHTML = '<li class="empty">Couldn\'t load the log.</li>'; return; }
-  if (!data || data.length === 0) { log.innerHTML = '<li class="empty">No rolls yet — give it a throw.</li>'; return; }
+  if (!data || data.length === 0) { log.innerHTML = '<li class="empty">No rolls yet - give it a throw.</li>'; return; }
 
   log.innerHTML = '';
   data.forEach(e => log.appendChild(renderEntry(e)));
