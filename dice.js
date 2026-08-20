@@ -1,25 +1,25 @@
 /* =========================================================================
-   ROLL THE BONES — 3D dice tray
+   ROLL THE BONES - 3D dice tray
    -------------------------------------------------------------------------
    Every die is placeholder Three.js geometry. Each real face gets exactly
    one printed numeral (faces are found by clustering triangles that share
    a surface normal, so this works on any convex shape without hand-mapped
    UVs). When you roll, the die's final orientation is computed so the
-   face carrying the chosen result ends up turned toward the viewer — the
-   number showing IS the result, not a coincidence — and that face gets a
+   face carrying the chosen result ends up turned toward the viewer - the
+   number showing IS the result, not a coincidence - and that face gets a
    quick highlight pop once it settles. Dice gem colors follow the current
    table theme.
 
    SWAPPING IN YOUR OWN BLENDER DICE
    ----------------------------------
    1. Model each die centered on the origin, ~1 unit across, export as
-      glTF Binary (.glb) — one file per die, e.g. dice-models/d20.glb.
+      glTF Binary (.glb) - one file per die, e.g. dice-models/d20.glb.
    2. Add a classic GLTFLoader script tag right after the three.min.js tag
       above, pointing at (cdnjs) three.js/r128/examples/js/loaders/GLTFLoader.js
    3. In DICE_CONFIG below, replace a die's `build` function to load and
       cache the .glb with THREE.GLTFLoader, then .clone() it on later rolls.
       If your model already has numbers sculpted in, you can skip
-      addFaceNumbers() for that die — but then you'll also need to tag each
+      addFaceNumbers() for that die - but then you'll also need to tag each
       face mesh's userData.value/faceNormal yourself so landing-on-result
       still works (see addFaceNumbers for the shape to match).
    ========================================================================= */
@@ -53,7 +53,7 @@ let currentThemeId = THEME_ORDER.includes(savedTheme) ? savedTheme : 'emerald';
 // ---------------------------------------------------------------------------
 // Face-finding: works on any convex polyhedron by clustering triangles that
 // share a surface normal (one cluster = one real face). -0 is normalized to
-// 0 before building the cluster key — without that, floating-point noise on
+// 0 before building the cluster key - without that, floating-point noise on
 // coordinates that are mathematically zero can split a single face into two
 // clusters, which is what caused faces with a missing or doubled number.
 // ---------------------------------------------------------------------------
@@ -137,7 +137,7 @@ function numberTexture(text, textColor, haloColor) {
   return tex;
 }
 
-// labels: array of {value, text} — one entry per real face, in cluster order.
+// labels: array of {value, text} - one entry per real face, in cluster order.
 // Also stamps userData.value / userData.faceNormal on each number plane, in
 // `mesh`'s PARENT-local frame, so rollCurrentDie() can look up "which way do
 // I need to turn to show a 7" without caring how deep the mesh is nested.
@@ -318,7 +318,7 @@ function tick() {
 tick();
 
 // ---------------------------------------------------------------------------
-// Rolling — tumble chaotically, then slerp precisely onto the face that
+// Rolling - tumble chaotically, then slerp precisely onto the face that
 // carries the rolled value so what's showing when it stops IS the result.
 // ---------------------------------------------------------------------------
 function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
@@ -442,7 +442,7 @@ DICE_ORDER.forEach(type => {
     if (rolling) return;
     currentType = type;
     mountDie(type);
-    document.getElementById('resultHud').innerHTML = '—';
+    document.getElementById('resultHud').innerHTML = '-';
     document.getElementById('resultHud').classList.remove('crit', 'fail');
     document.getElementById('trayWrap').classList.remove('crit', 'fail');
     document.getElementById('hint').textContent = 'Click the tray, or press Enter / Space, to roll';
@@ -459,7 +459,7 @@ tray.addEventListener('click', rollCurrentDie);
 tray.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rollCurrentDie(); } });
 
 // ---------------------------------------------------------------------------
-// Fantasy backdrops — procedural, layered, and re-drawn per theme
+// Fantasy backdrops - procedural, layered, and re-drawn per theme
 // ---------------------------------------------------------------------------
 const SVGNS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs) {
@@ -637,7 +637,7 @@ function applyTheme(themeId) {
   rimLight.color.setHex(meta.rim);
   buildAmbience(themeId);
   mountDie(currentType);
-  document.getElementById('resultHud').innerHTML = '—';
+  document.getElementById('resultHud').innerHTML = '-';
   document.getElementById('resultHud').classList.remove('crit', 'fail');
   document.getElementById('trayWrap').classList.remove('crit', 'fail');
   document.getElementById('hint').textContent = 'Click the tray, or press Enter / Space, to roll';
