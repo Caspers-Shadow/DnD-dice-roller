@@ -80,14 +80,11 @@ document.getElementById('joinBtn').addEventListener('click', async () => {
   if (!code) return;
   statusEl.textContent = 'Looking for that party…';
   try {
-    const { data: party, error: findErr } = await supabaseClient.from('parties').select('id, name').eq('invite_code', code).maybeSingle();
-    if (findErr) { statusEl.textContent = findErr.message; console.error(findErr); return; }
-    if (!party) { statusEl.textContent = 'No party found with that code.'; return; }
+    const { data, error } = await supabaseClient.rpc('join_party_by_code', { p_code: code });
+    if (error) { statusEl.textContent = error.message.includes('No party found') ? 'No party found with that code.' : error.message; console.error(error); return; }
+    if (!data || data.length === 0) { statusEl.textContent = 'No party found with that code.'; return; }
 
-    const { error: joinErr } = await supabaseClient.from('party_members').insert({ party_id: party.id, user_id: me.id, role: 'player' });
-    if (joinErr && !String(joinErr.message).includes('duplicate')) { statusEl.textContent = joinErr.message; console.error(joinErr); return; }
-
-    window.location.href = 'party.html?party=' + encodeURIComponent(party.id);
+    window.location.href = 'party.html?party=' + encodeURIComponent(data[0].id);
   } catch (err) {
     statusEl.textContent = 'Something went wrong: ' + (err && err.message ? err.message : String(err));
     console.error(err);
