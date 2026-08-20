@@ -1,5 +1,5 @@
 /* =========================================================================
-   SHARED — Supabase client + small helpers used across every page.
+   SHARED - Supabase client + small helpers used across every page.
    Loaded after config.js and the Supabase CDN script on every page.
    ========================================================================= */
 
