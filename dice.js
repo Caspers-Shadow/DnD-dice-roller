@@ -116,7 +116,7 @@ function numberTexture(text, textColor, haloColor) {
   c.width = c.height = size;
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, size, size);
-  ctx.font = '900 72px Georgia, serif';
+  ctx.font = '900 90px Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineWidth = 9;
@@ -210,25 +210,25 @@ const INK = '#241608', INK_HALO = 'rgba(255,250,235,0.65)';
 function buildD4() {
   const geo = new THREE.TetrahedronGeometry(0.72);
   const mesh = new THREE.Mesh(geo, gemMaterial(THEME_META[currentThemeId].dice.d4));
-  addFaceNumbers(mesh, geo, 0.3, IVORY, IVORY_HALO, seqLabels(1, 4));
+  addFaceNumbers(mesh, geo, 0.4, IVORY, IVORY_HALO, seqLabels(1, 4));
   return mesh;
 }
 function buildD8() {
   const geo = new THREE.OctahedronGeometry(0.68);
   const mesh = new THREE.Mesh(geo, gemMaterial(THEME_META[currentThemeId].dice.d8));
-  addFaceNumbers(mesh, geo, 0.24, IVORY, IVORY_HALO, seqLabels(1, 8));
+  addFaceNumbers(mesh, geo, 0.32, IVORY, IVORY_HALO, seqLabels(1, 8));
   return mesh;
 }
 function buildD12() {
   const geo = new THREE.DodecahedronGeometry(0.66);
   const mesh = new THREE.Mesh(geo, gemMaterial(THEME_META[currentThemeId].dice.d12));
-  addFaceNumbers(mesh, geo, 0.26, IVORY, IVORY_HALO, seqLabels(1, 12));
+  addFaceNumbers(mesh, geo, 0.34, IVORY, IVORY_HALO, seqLabels(1, 12));
   return mesh;
 }
 function buildD20() {
   const geo = new THREE.IcosahedronGeometry(0.68);
   const mesh = new THREE.Mesh(geo, gemMaterial(THEME_META[currentThemeId].dice.d20, 0.5, 0.25));
-  addFaceNumbers(mesh, geo, 0.17, INK, INK_HALO, seqLabels(1, 20));
+  addFaceNumbers(mesh, geo, 0.22, INK, INK_HALO, seqLabels(1, 20));
   return mesh;
 }
 function buildBipyramid(colorHex, labelsTop, labelsBottom) {
@@ -236,10 +236,10 @@ function buildBipyramid(colorHex, labelsTop, labelsBottom) {
   const mat = gemMaterial(colorHex, 0.55, 0.3);
   const top = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.62, 5, 1, true), mat);
   top.position.y = 0.31;
-  addFaceNumbers(top, top.geometry, 0.18, INK, INK_HALO, labelsTop);
+  addFaceNumbers(top, top.geometry, 0.24, INK, INK_HALO, labelsTop);
   const bottom = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.62, 5, 1, true), mat);
   bottom.position.y = -0.31; bottom.rotation.x = Math.PI; bottom.rotation.y = Math.PI / 5;
-  addFaceNumbers(bottom, bottom.geometry, 0.18, INK, INK_HALO, labelsBottom);
+  addFaceNumbers(bottom, bottom.geometry, 0.24, INK, INK_HALO, labelsBottom);
   group.add(top, bottom);
   return group;
 }
