@@ -12,7 +12,9 @@ let partyId = null;
 let party = null;
 let myRole = null;       // 'dm' | 'player'
 let currentSessionId = null;
-let expandedSessionId = null; // which accordion item is open, if any
+let sessionsList = [];   // ascending by started_at
+let pageIndex = 0;       // index into sessionsList currently shown in the notebook
+let onlineIds = new Set();
 
 (async function initPartyRoom() {
   me = await requireSession();
@@ -32,14 +34,16 @@ let expandedSessionId = null; // which accordion item is open, if any
   document.title = party.name + ' - The Faerie\'s Fortune';
 
   await ensureSession();
+  setupPresence();
   await renderPartyInfo();
   await refreshLog();
-  await refreshAccordion();
+  await refreshNotebook();
 })();
 
 function showBlocked(message) {
   document.getElementById('partyInfo').innerHTML = `<p class="party-hint">${escapeHtml(message)}</p><p><a href="dashboard.html" class="link-btn">Back to your parties</a></p>`;
-  document.querySelectorAll('.theme-select, .dice-select, .tray-wrap, .hint, .hamburger-row, .hamburger-panel, .ledger').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.theme-select, .dice-select, .tray-wrap, .hint, .ledger').forEach(el => el.style.display = 'none');
+  document.getElementById('hamburgerBtn').style.display = 'none';
 }
 
 async function ensureSession() {
@@ -52,7 +56,22 @@ async function ensureSession() {
 }
 
 // ---------------------------------------------------------------------------
-// Roster - DM stands out with a crown, your own entry is marked "(You)"
+// Presence - who's actually got this party open right now, live.
+// ---------------------------------------------------------------------------
+function setupPresence() {
+  const channel = supabaseClient.channel('party-presence-' + partyId, { config: { presence: { key: me.id } } });
+  channel.on('presence', { event: 'sync' }, () => {
+    onlineIds = new Set(Object.keys(channel.presenceState()));
+    renderPartyInfo();
+  });
+  channel.subscribe(async status => {
+    if (status === 'SUBSCRIBED') await channel.track({ online_at: new Date().toISOString() });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Roster - DM stands out with a crown, your own entry is marked "(You)",
+// and everyone shows lit up (online) or dimmed (offline) based on presence.
 // ---------------------------------------------------------------------------
 async function renderPartyInfo() {
   const panel = document.getElementById('partyInfo');
@@ -74,15 +93,16 @@ async function renderPartyInfo() {
 
   const chips = document.createElement('div');
   chips.className = 'member-chips';
-  // DMs first, then everyone else, so the standout chip reads first
   const sorted = (roster || []).slice().sort((a, b) => (a.role === 'dm' ? -1 : 0) - (b.role === 'dm' ? -1 : 0));
   sorted.forEach(r => {
     const isDM = r.role === 'dm';
     const isMe = r.user_id === me.id;
+    const isOnline = isMe || onlineIds.has(r.user_id);
     const chip = document.createElement('span');
-    chip.className = 'member-chip' + (isDM ? ' dm' : '') + (isMe ? ' you' : '');
+    chip.className = 'member-chip' + (isDM ? ' dm' : '') + (isMe ? ' you' : '') + (isOnline ? ' online' : ' offline');
     const name = r.user ? r.user.display_name : 'Unknown';
-    chip.innerHTML = (isDM ? '<span class="crown" title="Dungeon Master">♛</span>' : '') +
+    chip.innerHTML = '<span class="presence-dot"></span>' +
+      (isDM ? '<span class="crown" title="Dungeon Master">♛</span>' : '') +
       escapeHtml(name) + (isMe ? ' <span class="you-tag">(You)</span>' : '');
     chips.appendChild(chip);
   });
@@ -100,14 +120,13 @@ async function startNewSession() {
   const { data: created } = await supabaseClient.from('sessions').insert({ party_id: partyId, label: null }).select().single();
   if (!created) return;
   currentSessionId = created.id;
-  expandedSessionId = created.id;
   await supabaseClient.from('log_entries').insert({ party_id: partyId, session_id: currentSessionId, user_id: me.id, type: 'session' });
   await refreshLog();
-  await refreshAccordion();
+  await refreshNotebook();
 }
 
 // ---------------------------------------------------------------------------
-// Log - rolls and session dividers only. Notes live in the hamburger panel.
+// Log - rolls and session dividers only. Notes live in the notebook.
 // ---------------------------------------------------------------------------
 async function refreshLog() {
   const log = document.getElementById('log');
@@ -150,80 +169,94 @@ async function recordRoll(cfg, display, isCrit, isFail) {
 }
 
 // ---------------------------------------------------------------------------
-// Hamburger panel - add a note, and a cascading (expand/collapse) list of
-// sessions with that session's notes tucked inside.
+// Drawer - top-left menu button, slide-in panel with nav + the notebook
 // ---------------------------------------------------------------------------
-const hamburgerBtn = document.getElementById('hamburgerBtn');
-const hamburgerPanel = document.getElementById('hamburgerPanel');
-hamburgerBtn.addEventListener('click', () => {
-  const open = hamburgerPanel.hasAttribute('hidden');
-  if (open) hamburgerPanel.removeAttribute('hidden'); else hamburgerPanel.setAttribute('hidden', '');
-  hamburgerBtn.setAttribute('aria-expanded', String(open));
-});
+const menuBtn = document.getElementById('hamburgerBtn');
+const drawer = document.getElementById('drawer');
+const drawerOverlay = document.getElementById('drawerOverlay');
 
-async function refreshAccordion() {
-  const wrap = document.getElementById('sessionAccordion');
+function openDrawer() {
+  drawer.classList.add('open'); drawerOverlay.classList.add('open'); drawerOverlay.hidden = false;
+  menuBtn.setAttribute('aria-expanded', 'true'); drawer.setAttribute('aria-hidden', 'false');
+}
+function closeDrawer() {
+  drawer.classList.remove('open'); drawerOverlay.classList.remove('open');
+  menuBtn.setAttribute('aria-expanded', 'false'); drawer.setAttribute('aria-hidden', 'true');
+  setTimeout(() => { drawerOverlay.hidden = true; }, 300);
+}
+menuBtn.addEventListener('click', () => (drawer.classList.contains('open') ? closeDrawer() : openDrawer()));
+document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+drawerOverlay.addEventListener('click', closeDrawer);
+document.getElementById('drawerLogout').addEventListener('click', signOutAndRedirect);
+
+// ---------------------------------------------------------------------------
+// The notebook - one session per page. Flip with Prev/Next; new notes jump
+// you to the current session's page automatically.
+// ---------------------------------------------------------------------------
+let notesBySession = {};
+
+async function refreshNotebook() {
   const [{ data: sessions }, { data: notes }] = await Promise.all([
-    supabaseClient.from('sessions').select('id, label, started_at').eq('party_id', partyId).order('started_at', { ascending: false }),
+    supabaseClient.from('sessions').select('id, label, started_at').eq('party_id', partyId).order('started_at', { ascending: true }),
     supabaseClient.from('log_entries').select('session_id, note_text, created_at, user:profiles(display_name)')
-      .eq('party_id', partyId).eq('type', 'note').order('created_at', { ascending: false }),
+      .eq('party_id', partyId).eq('type', 'note').order('created_at', { ascending: true }),
   ]);
 
-  if (!sessions || sessions.length === 0) { wrap.innerHTML = '<p class="party-hint">No sessions yet.</p>'; return; }
-
-  const notesBySession = {};
+  sessionsList = sessions || [];
+  notesBySession = {};
   (notes || []).forEach(n => {
     if (!notesBySession[n.session_id]) notesBySession[n.session_id] = [];
     notesBySession[n.session_id].push(n);
   });
 
-  wrap.innerHTML = '';
-  sessions.forEach((s, i) => {
-    const sessionNotes = notesBySession[s.id] || [];
-    const item = document.createElement('div');
-    item.className = 'accordion-item' + (expandedSessionId === s.id ? ' expanded' : '');
-
-    const header = document.createElement('button');
-    header.className = 'accordion-header';
-    header.type = 'button';
-    const label = s.label || ('Session · ' + dateTimeLabel(s.started_at));
-    header.innerHTML = `<span><span class="caret">▸</span>${escapeHtml(label)}</span><span class="accordion-count">${sessionNotes.length} note${sessionNotes.length === 1 ? '' : 's'}</span>`;
-    header.addEventListener('click', () => {
-      expandedSessionId = (expandedSessionId === s.id) ? null : s.id;
-      refreshAccordion();
-    });
-
-    const body = document.createElement('div');
-    body.className = 'accordion-body';
-    if (sessionNotes.length === 0) {
-      body.innerHTML = '<p class="accordion-empty">No notes in this session yet.</p>';
-    } else {
-      const ul = document.createElement('ul');
-      sessionNotes.forEach(n => {
-        const li = document.createElement('li');
-        const who = n.user ? escapeHtml(n.user.display_name) + ' · ' : '';
-        li.innerHTML = `<span>${who}“${escapeHtml(n.note_text)}”</span><span>${timeLabel(n.created_at)}</span>`;
-        ul.appendChild(li);
-      });
-      body.appendChild(ul);
-    }
-
-    item.appendChild(header);
-    item.appendChild(body);
-    wrap.appendChild(item);
-  });
+  pageIndex = Math.max(0, sessionsList.findIndex(s => s.id === currentSessionId));
+  renderNotebookPage();
 }
+
+function renderNotebookPage() {
+  const pageEl = document.getElementById('notebookPage');
+  const indicatorEl = document.getElementById('pageIndicator');
+  const prevBtn = document.getElementById('pagePrev');
+  const nextBtn = document.getElementById('pageNext');
+
+  if (sessionsList.length === 0) {
+    pageEl.innerHTML = '<p class="page-empty">No sessions yet.</p>';
+    indicatorEl.textContent = '';
+    prevBtn.disabled = nextBtn.disabled = true;
+    return;
+  }
+
+  const s = sessionsList[pageIndex];
+  const notes = notesBySession[s.id] || [];
+  const title = s.label || ('Session ' + (pageIndex + 1));
+
+  let html = `<p class="page-session-title">${escapeHtml(title)}</p><p class="page-session-date">${dateTimeLabel(s.started_at)}</p>`;
+  if (notes.length === 0) {
+    html += '<p class="page-empty">No notes written in this session.</p>';
+  } else {
+    html += '<ul class="page-notes">' + notes.map(n =>
+      `<li><span class="note-author">${n.user ? escapeHtml(n.user.display_name) : 'Someone'}:</span>${escapeHtml(n.note_text)}<span class="note-time"> · ${timeLabel(n.created_at)}</span></li>`
+    ).join('') + '</ul>';
+  }
+  pageEl.innerHTML = html;
+
+  indicatorEl.textContent = `Page ${pageIndex + 1} of ${sessionsList.length}`;
+  prevBtn.disabled = pageIndex === 0;
+  nextBtn.disabled = pageIndex === sessionsList.length - 1;
+}
+
+document.getElementById('pagePrev').addEventListener('click', () => { if (pageIndex > 0) { pageIndex--; renderNotebookPage(); } });
+document.getElementById('pageNext').addEventListener('click', () => { if (pageIndex < sessionsList.length - 1) { pageIndex++; renderNotebookPage(); } });
 
 document.getElementById('noteBtn').addEventListener('click', async () => {
   const input = document.getElementById('noteInput');
   const text = input.value.trim();
   if (!text || !currentSessionId) return;
   input.value = '';
-  expandedSessionId = currentSessionId; // open the session your note landed in
   await supabaseClient.from('log_entries').insert({
     party_id: partyId, session_id: currentSessionId, user_id: me.id, type: 'note', note_text: text,
   });
-  refreshAccordion();
+  await refreshNotebook();
 });
 document.getElementById('noteInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('noteBtn').click(); } });
-document.getElementById('refreshBtn').addEventListener('click', () => { refreshLog(); refreshAccordion(); });
+document.getElementById('refreshBtn').addEventListener('click', () => { refreshLog(); refreshNotebook(); });
