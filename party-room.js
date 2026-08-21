@@ -12,6 +12,7 @@ let partyId = null;
 let party = null;
 let myRole = null;       // 'dm' | 'player'
 let currentSessionId = null;
+let expandedSessionId = null; // which accordion item is open, if any
 
 (async function initPartyRoom() {
   me = await requireSession();
@@ -33,11 +34,12 @@ let currentSessionId = null;
   await ensureSession();
   await renderPartyInfo();
   await refreshLog();
+  await refreshAccordion();
 })();
 
 function showBlocked(message) {
   document.getElementById('partyInfo').innerHTML = `<p class="party-hint">${escapeHtml(message)}</p><p><a href="dashboard.html" class="link-btn">Back to your parties</a></p>`;
-  document.querySelectorAll('.theme-select, .dice-select, .tray-wrap, .hint, #notePanel, .ledger').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.theme-select, .dice-select, .tray-wrap, .hint, .hamburger-row, .hamburger-panel, .ledger').forEach(el => el.style.display = 'none');
 }
 
 async function ensureSession() {
@@ -49,10 +51,13 @@ async function ensureSession() {
   if (created) currentSessionId = created.id;
 }
 
+// ---------------------------------------------------------------------------
+// Roster - DM stands out with a crown, your own entry is marked "(You)"
+// ---------------------------------------------------------------------------
 async function renderPartyInfo() {
   const panel = document.getElementById('partyInfo');
   const { data: roster } = await supabaseClient
-    .from('party_members').select('role, user:profiles(display_name)').eq('party_id', partyId);
+    .from('party_members').select('user_id, role, user:profiles(display_name)').eq('party_id', partyId);
 
   panel.innerHTML = '';
   const nameRow = document.createElement('div');
@@ -69,10 +74,16 @@ async function renderPartyInfo() {
 
   const chips = document.createElement('div');
   chips.className = 'member-chips';
-  (roster || []).forEach(r => {
+  // DMs first, then everyone else, so the standout chip reads first
+  const sorted = (roster || []).slice().sort((a, b) => (a.role === 'dm' ? -1 : 0) - (b.role === 'dm' ? -1 : 0));
+  sorted.forEach(r => {
+    const isDM = r.role === 'dm';
+    const isMe = r.user_id === me.id;
     const chip = document.createElement('span');
-    chip.className = 'member-chip' + (r.role === 'dm' ? ' active' : '');
-    chip.textContent = (r.user ? r.user.display_name : 'Unknown') + (r.role === 'dm' ? ' · DM' : '');
+    chip.className = 'member-chip' + (isDM ? ' dm' : '') + (isMe ? ' you' : '');
+    const name = r.user ? r.user.display_name : 'Unknown';
+    chip.innerHTML = (isDM ? '<span class="crown" title="Dungeon Master">♛</span>' : '') +
+      escapeHtml(name) + (isMe ? ' <span class="you-tag">(You)</span>' : '');
     chips.appendChild(chip);
   });
   panel.appendChild(chips);
@@ -89,19 +100,22 @@ async function startNewSession() {
   const { data: created } = await supabaseClient.from('sessions').insert({ party_id: partyId, label: null }).select().single();
   if (!created) return;
   currentSessionId = created.id;
+  expandedSessionId = created.id;
   await supabaseClient.from('log_entries').insert({ party_id: partyId, session_id: currentSessionId, user_id: me.id, type: 'session' });
   await refreshLog();
+  await refreshAccordion();
 }
 
 // ---------------------------------------------------------------------------
-// Log - rolls, notes, and session dividers, newest first
+// Log - rolls and session dividers only. Notes live in the hamburger panel.
 // ---------------------------------------------------------------------------
 async function refreshLog() {
   const log = document.getElementById('log');
   const { data, error } = await supabaseClient
     .from('log_entries')
-    .select('type, die, display, crit, fail, note_text, created_at, user:profiles(display_name)')
+    .select('type, die, display, crit, fail, created_at, user:profiles(display_name)')
     .eq('party_id', partyId)
+    .neq('type', 'note')
     .order('created_at', { ascending: false })
     .limit(60);
 
@@ -120,11 +134,6 @@ function renderEntry(e) {
     return li;
   }
   const who = e.user ? escapeHtml(e.user.display_name) + ' · ' : '';
-  if (e.type === 'note') {
-    li.className = 'log-note';
-    li.innerHTML = `<span>${who}“${escapeHtml(e.note_text)}”</span><span class="val">${timeLabel(e.created_at)}</span>`;
-    return li;
-  }
   if (e.crit) li.classList.add('crit');
   if (e.fail) li.classList.add('fail');
   li.innerHTML = `<span>${who}${e.die} · ${timeLabel(e.created_at)}${e.crit ? ' · critical!' : ''}${e.fail ? ' · fumble' : ''}</span><span class="val">${e.display}</span>`;
@@ -140,15 +149,81 @@ async function recordRoll(cfg, display, isCrit, isFail) {
   refreshLog();
 }
 
+// ---------------------------------------------------------------------------
+// Hamburger panel - add a note, and a cascading (expand/collapse) list of
+// sessions with that session's notes tucked inside.
+// ---------------------------------------------------------------------------
+const hamburgerBtn = document.getElementById('hamburgerBtn');
+const hamburgerPanel = document.getElementById('hamburgerPanel');
+hamburgerBtn.addEventListener('click', () => {
+  const open = hamburgerPanel.hasAttribute('hidden');
+  if (open) hamburgerPanel.removeAttribute('hidden'); else hamburgerPanel.setAttribute('hidden', '');
+  hamburgerBtn.setAttribute('aria-expanded', String(open));
+});
+
+async function refreshAccordion() {
+  const wrap = document.getElementById('sessionAccordion');
+  const [{ data: sessions }, { data: notes }] = await Promise.all([
+    supabaseClient.from('sessions').select('id, label, started_at').eq('party_id', partyId).order('started_at', { ascending: false }),
+    supabaseClient.from('log_entries').select('session_id, note_text, created_at, user:profiles(display_name)')
+      .eq('party_id', partyId).eq('type', 'note').order('created_at', { ascending: false }),
+  ]);
+
+  if (!sessions || sessions.length === 0) { wrap.innerHTML = '<p class="party-hint">No sessions yet.</p>'; return; }
+
+  const notesBySession = {};
+  (notes || []).forEach(n => {
+    if (!notesBySession[n.session_id]) notesBySession[n.session_id] = [];
+    notesBySession[n.session_id].push(n);
+  });
+
+  wrap.innerHTML = '';
+  sessions.forEach((s, i) => {
+    const sessionNotes = notesBySession[s.id] || [];
+    const item = document.createElement('div');
+    item.className = 'accordion-item' + (expandedSessionId === s.id ? ' expanded' : '');
+
+    const header = document.createElement('button');
+    header.className = 'accordion-header';
+    header.type = 'button';
+    const label = s.label || ('Session · ' + dateTimeLabel(s.started_at));
+    header.innerHTML = `<span><span class="caret">▸</span>${escapeHtml(label)}</span><span class="accordion-count">${sessionNotes.length} note${sessionNotes.length === 1 ? '' : 's'}</span>`;
+    header.addEventListener('click', () => {
+      expandedSessionId = (expandedSessionId === s.id) ? null : s.id;
+      refreshAccordion();
+    });
+
+    const body = document.createElement('div');
+    body.className = 'accordion-body';
+    if (sessionNotes.length === 0) {
+      body.innerHTML = '<p class="accordion-empty">No notes in this session yet.</p>';
+    } else {
+      const ul = document.createElement('ul');
+      sessionNotes.forEach(n => {
+        const li = document.createElement('li');
+        const who = n.user ? escapeHtml(n.user.display_name) + ' · ' : '';
+        li.innerHTML = `<span>${who}“${escapeHtml(n.note_text)}”</span><span>${timeLabel(n.created_at)}</span>`;
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    }
+
+    item.appendChild(header);
+    item.appendChild(body);
+    wrap.appendChild(item);
+  });
+}
+
 document.getElementById('noteBtn').addEventListener('click', async () => {
   const input = document.getElementById('noteInput');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text || !currentSessionId) return;
   input.value = '';
+  expandedSessionId = currentSessionId; // open the session your note landed in
   await supabaseClient.from('log_entries').insert({
     party_id: partyId, session_id: currentSessionId, user_id: me.id, type: 'note', note_text: text,
   });
-  refreshLog();
+  refreshAccordion();
 });
 document.getElementById('noteInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('noteBtn').click(); } });
-document.getElementById('refreshBtn').addEventListener('click', refreshLog);
+document.getElementById('refreshBtn').addEventListener('click', () => { refreshLog(); refreshAccordion(); });
