@@ -1,5 +1,5 @@
 :root{
-    /* Emerald Table — dark, default */
+    /* Emerald Table - dark, default */
     --bg: #1C1712;
     --bg-glow: #2a1810;
     --felt: #1B3A2F;
@@ -230,10 +230,48 @@
     background: rgba(0,0,0,0.18); border: 1px solid var(--accent-dark); border-radius: 999px;
     padding: 5px 8px 5px 13px; font-family: var(--mono); font-size: 12px; color: var(--text-dim);
   }
-  .member-chip.active { background: linear-gradient(180deg, var(--accent-bright), var(--accent-dark)); color: var(--ink); border-color: var(--accent-bright); font-weight: 600; }
+  .member-chip.dm {
+    background: linear-gradient(180deg, var(--accent-bright), var(--accent-dark)); color: var(--ink);
+    border-color: var(--accent-bright); font-weight: 700;
+  }
+  .member-chip .crown { margin-right: 3px; }
+  .member-chip.you { box-shadow: 0 0 0 2px var(--accent-bright) inset; }
+  .member-chip .you-tag { opacity: 0.65; font-size: 10px; margin-left: 3px; }
   .member-chip .chip-name { cursor: pointer; }
   .member-chip .remove { cursor: pointer; opacity: 0.55; font-size: 11px; }
   .member-chip .remove:hover { opacity: 1; }
+
+  /* ---- hamburger: notes + sessions ---- */
+  .hamburger-row { display: flex; justify-content: center; }
+  .hamburger-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(180deg, var(--panel-a), var(--panel-b)); border: 1px solid var(--accent-dark);
+    border-radius: 10px; padding: 9px 16px; color: var(--text-dim); font-family: var(--mono); font-size: 13px;
+    cursor: pointer; transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .hamburger-btn:hover { border-color: var(--accent); color: var(--text); }
+  .hamburger-btn[aria-expanded="true"] { border-color: var(--accent-bright); color: var(--accent-bright); }
+  .hamburger-icon { font-size: 15px; line-height: 1; }
+  .hamburger-panel { margin-top: 10px; }
+
+  .accordion-item { border-bottom: 1px dashed var(--accent-dark); }
+  .accordion-item:last-child { border-bottom: none; }
+  .accordion-header {
+    display: flex; justify-content: space-between; align-items: center; width: 100%;
+    background: none; border: none; cursor: pointer; padding: 10px 2px;
+    font-family: var(--mono); font-size: 12px; color: var(--accent); text-align: left;
+  }
+  .accordion-header .caret { display: inline-block; transition: transform 0.2s ease; margin-right: 6px; }
+  .accordion-item.expanded .accordion-header .caret { transform: rotate(90deg); }
+  .accordion-count { color: var(--text-dim); font-weight: 400; }
+  .accordion-body { display: none; padding: 0 2px 10px 20px; }
+  .accordion-item.expanded .accordion-body { display: block; }
+  .accordion-body ul { list-style: none; margin: 0; padding: 0; }
+  .accordion-body li {
+    padding: 5px 0; font-family: var(--mono); font-size: 12px; color: var(--text-dim); font-style: italic;
+    display: flex; justify-content: space-between; gap: 10px;
+  }
+  .accordion-empty { padding: 4px 0; font-size: 12px; color: var(--text-dim); font-style: italic; }
 
   .ledger {
     width: min(100%, 560px); margin-top: 26px;
