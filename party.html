@@ -11,11 +11,40 @@
 </head>
 <body>
 
+<button class="menu-btn" id="hamburgerBtn" aria-expanded="false" aria-controls="drawer" aria-label="Open menu">☰</button>
+<div class="drawer-overlay" id="drawerOverlay" hidden></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <span class="drawer-title">The Faerie's Fortune</span>
+    <button class="drawer-close" id="drawerClose" aria-label="Close menu">✕</button>
+  </div>
+  <nav class="drawer-nav">
+    <a href="dashboard.html">← Your Parties</a>
+    <button id="drawerLogout">Log Out</button>
+  </nav>
+  <div class="drawer-divider"></div>
+
+  <div class="notebook">
+    <div class="party-form">
+      <input type="text" id="noteInput" placeholder="Write a note…" maxlength="200">
+      <button class="die-btn" id="noteBtn">Add</button>
+    </div>
+    <div class="notebook-page" id="notebookPage">
+      <p class="page-empty">Loading…</p>
+    </div>
+    <div class="notebook-nav">
+      <button class="link-btn" id="pagePrev">‹ Prev</button>
+      <span class="page-indicator" id="pageIndicator"></span>
+      <button class="link-btn" id="pageNext">Next ›</button>
+    </div>
+  </div>
+</aside>
+
 <div id="ambience"></div>
 
 <div class="stage">
   <header>
-    <p class="eyebrow"><a href="dashboard.html" class="back-link">← Your Parties</a></p>
+    <p class="eyebrow">The Gaming Table</p>
     <h1 id="partyTitle">The Faerie's <span>Fortune</span></h1>
   </header>
 
@@ -40,23 +69,7 @@
 
   <p class="hint" id="hint">Click the tray, or press Enter / Space, to roll</p>
 
-  <div class="hamburger-row" style="width:min(100%,560px); margin-top:26px;">
-    <button class="hamburger-btn" id="hamburgerBtn" aria-expanded="false" aria-controls="hamburgerPanel">
-      <span class="hamburger-icon">☰</span> Notes &amp; Sessions
-    </button>
-  </div>
-
-  <div class="party-panel hamburger-panel" id="hamburgerPanel" style="width:min(100%,560px);" hidden>
-    <h2>Add a Note</h2>
-    <div class="party-form">
-      <input type="text" id="noteInput" placeholder="Add a note…" maxlength="200">
-      <button class="die-btn" id="noteBtn">Add</button>
-    </div>
-    <h2 style="margin-top:18px;">Sessions</h2>
-    <div id="sessionAccordion"><p class="party-hint">Loading sessions…</p></div>
-  </div>
-
-  <div class="ledger">
+  <div class="ledger" style="margin-top:26px;">
     <div class="auth-row" style="margin-bottom:10px;">
       <h2 id="ledgerHeading" style="margin:0;">Log</h2>
       <button class="link-btn" id="refreshBtn">Refresh</button>
