@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>The Faerie's Fortune - Log In</title>
+<title>The Faerie's Fortune - Your Parties</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -14,44 +14,43 @@
 
 <div class="stage stage-narrow">
   <header>
-    <p class="eyebrow">The Gaming Table</p>
-    <h1>The Faerie's <span>Fortune</span></h1>
+    <p class="eyebrow" id="welcomeLine">The Gaming Table</p>
+    <h1>Your <span>Parties</span></h1>
   </header>
 
-  <div class="auth-card" id="authCard">
-    <div class="auth-tabs" role="tablist">
-      <button class="auth-tab active" id="tabLogin" role="tab" aria-selected="true">Log In</button>
-      <button class="auth-tab" id="tabSignup" role="tab" aria-selected="false">Sign Up</button>
-    </div>
-
-    <div id="loginForm">
-      <div class="party-form" style="flex-direction:column;">
-        <input type="email" id="loginEmail" placeholder="Email" autocomplete="email">
-        <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
-        <button class="die-btn" id="loginBtn">Log In</button>
-      </div>
-    </div>
-
-    <div id="signupForm" style="display:none;">
-      <div class="party-form" style="flex-direction:column;">
-        <input type="text" id="signupName" placeholder="Your name" maxlength="30" autocomplete="nickname">
-        <input type="email" id="signupEmail" placeholder="Email" autocomplete="email">
-        <input type="password" id="signupPassword" placeholder="Password (6+ characters)" autocomplete="new-password">
-        <button class="die-btn" id="signupBtn">Create Account</button>
-      </div>
-    </div>
-
-    <p class="party-hint auth-status" id="authStatus"></p>
+  <div class="auth-row" style="width:min(100%,480px); margin-bottom:20px;">
+    <span></span>
+    <button class="link-btn" id="logoutBtn">Log Out</button>
   </div>
 
-  <p class="party-hint" style="text-align:center; margin-top:18px;">
-    Once you're in, you can create a party as its Dungeon Master, or join one as a Player with an invite code.
-  </p>
+  <div class="party-panel" id="partyList" style="width:min(100%,480px);">
+    <p class="party-hint">Loading your parties…</p>
+  </div>
+
+  <div class="party-panel" id="createPanel" style="width:min(100%,480px);">
+    <h2>Found a Party</h2>
+    <p class="party-hint">You'll be its Dungeon Master.</p>
+    <div class="party-form">
+      <input type="text" id="createName" placeholder="Party name (e.g. The Last Lantern)" maxlength="40">
+      <button class="die-btn" id="createBtn">Create</button>
+    </div>
+  </div>
+
+  <div class="party-panel" id="joinPanel" style="width:min(100%,480px);">
+    <h2>Join a Party</h2>
+    <p class="party-hint">Ask your Dungeon Master for the invite code.</p>
+    <div class="party-form">
+      <input type="text" id="joinCode" placeholder="Invite code" maxlength="6" style="text-transform:uppercase;">
+      <button class="die-btn" id="joinBtn">Join</button>
+    </div>
+  </div>
+
+  <p class="party-hint auth-status" id="dashStatus" style="text-align:center;"></p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="supabase-client.js"></script>
-<script src="login.js"></script>
+<script src="dashboard.js"></script>
 </body>
 </html>
