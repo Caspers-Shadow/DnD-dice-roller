@@ -6,10 +6,16 @@ let me = null;
 const statusEl = document.getElementById('dashStatus');
 
 (async function initDashboard() {
-  me = await requireSession();
-  const name = await getDisplayName(me.id);
-  document.getElementById('welcomeLine').textContent = 'Welcome back, ' + name;
-  await loadParties();
+  try {
+    me = await requireSession();
+    const name = await getDisplayName(me.id);
+    document.getElementById('welcomeLine').textContent = 'Welcome back, ' + name;
+    await loadParties();
+  } catch (err) {
+    if (err && (err.message === 'no session' || err.message === 'cloud not enabled' || err.message === 'redirect loop detected')) return;
+    document.getElementById('partyList').innerHTML = '<p class="party-hint">Something went wrong loading this page: ' + escapeHtml(err && err.message ? err.message : String(err)) + '</p>';
+    console.error(err);
+  }
 })();
 
 async function loadParties() {
