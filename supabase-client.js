@@ -23,13 +23,34 @@ function dateTimeLabel(iso) { return new Date(iso).toLocaleString([], { month: '
 // Waits for Supabase to finish restoring the session from storage (rather
 // than reading it mid-restore, which is what can cause a page to briefly
 // think there's no session right after load and bounce somewhere it
-// shouldn't).
+// shouldn't). Guarded so it can never hang forever even if something about
+// the auth event never fires as expected.
 function waitForAuthReady() {
   return new Promise(resolve => {
-    const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-      data.subscription.unsubscribe();
+    let resolved = false;
+    let unsubscribeFn = null;
+
+    const finish = session => {
+      if (resolved) return;
+      resolved = true;
+      if (unsubscribeFn) { try { unsubscribeFn(); } catch (e) { /* ignore */ } }
       resolve(session);
-    });
+    };
+
+    const result = supabaseClient.auth.onAuthStateChange((_event, session) => finish(session));
+    unsubscribeFn = () => result.data.subscription.unsubscribe();
+
+    // Hard safety net: if the event somehow never fires, fall back to a
+    // direct check rather than leaving the caller waiting indefinitely.
+    setTimeout(async () => {
+      if (resolved) return;
+      try {
+        const { data } = await supabaseClient.auth.getSession();
+        finish(data.session);
+      } catch (e) {
+        finish(null);
+      }
+    }, 1000);
   });
 }
 
