@@ -30,7 +30,7 @@ let onlineIds = new Set();
   if (partyErr || !partyRow) { showBlocked('That party could not be found.'); return; }
   party = partyRow;
 
-  document.getElementById('partyTitle').innerHTML = escapeHtml(party.name) + ' <span>· ' + (myRole === 'dm' ? 'DM' : 'Player') + '</span>';
+  document.getElementById('partyTitle').innerHTML = escapeHtml(party.name) + ' <span>(' + (myRole === 'dm' ? 'you\u2019re the DM' : 'you\u2019re playing') + ')</span>';
   document.title = party.name + ' - The Faerie\'s Fortune';
 
   await ensureSession();
@@ -149,13 +149,14 @@ function renderEntry(e) {
   const li = document.createElement('li');
   if (e.type === 'session') {
     li.className = 'log-session';
-    li.textContent = 'Session began · ' + timeLabel(e.created_at);
+    li.textContent = 'A new session began at ' + timeLabel(e.created_at);
     return li;
   }
-  const who = e.user ? escapeHtml(e.user.display_name) + ' · ' : '';
+  const who = e.user ? escapeHtml(e.user.display_name) + ' rolled the ' : 'Someone rolled the ';
+  const flourish = e.crit ? ' - critical hit!' : e.fail ? ' - fumble.' : '';
   if (e.crit) li.classList.add('crit');
   if (e.fail) li.classList.add('fail');
-  li.innerHTML = `<span>${who}${e.die} · ${timeLabel(e.created_at)}${e.crit ? ' · critical!' : ''}${e.fail ? ' · fumble' : ''}</span><span class="val">${e.display}</span>`;
+  li.innerHTML = `<span>${who}${e.die}${flourish} <span class="entry-time">${timeLabel(e.created_at)}</span></span><span class="val">${e.display}</span>`;
   return li;
 }
 
@@ -235,7 +236,7 @@ function renderNotebookPage() {
     html += '<p class="page-empty">No notes written in this session.</p>';
   } else {
     html += '<ul class="page-notes">' + notes.map(n =>
-      `<li><span class="note-author">${n.user ? escapeHtml(n.user.display_name) : 'Someone'}:</span>${escapeHtml(n.note_text)}<span class="note-time"> · ${timeLabel(n.created_at)}</span></li>`
+      `<li><span class="note-author">${n.user ? escapeHtml(n.user.display_name) : 'Someone'}:</span>${escapeHtml(n.note_text)}<span class="note-time">${timeLabel(n.created_at)}</span></li>`
     ).join('') + '</ul>';
   }
   pageEl.innerHTML = html;
