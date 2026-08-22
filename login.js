@@ -11,8 +11,20 @@ let busy = false;
       '<p class="party-hint">Accounts aren\'t configured yet. See SETUP.md to connect a free Supabase project - until then, this page can\'t sign anyone in.</p>';
     return;
   }
-  const session = await waitForAuthReady();
-  if (session) window.location.href = 'dashboard.html';
+  try {
+    const session = await waitForAuthReady();
+    if (session) {
+      document.getElementById('authCard').innerHTML =
+        '<p class="party-hint" style="text-align:center;">You\'re already signed in.</p>' +
+        '<p style="text-align:center; margin-top:14px;"><a href="dashboard.html" class="die-btn" style="display:inline-block; text-decoration:none;">Go to Your Parties</a></p>' +
+        '<p style="text-align:center; margin-top:12px;"><button class="link-btn" id="notMeBtn">Not you? Log out</button></p>';
+      document.getElementById('notMeBtn').addEventListener('click', signOutAndRedirect);
+    }
+  } catch (err) {
+    console.error(err);
+    // If the check itself fails for any reason, do nothing - the login
+    // form underneath is the safe default either way.
+  }
 })();
 
 document.getElementById('tabLogin').addEventListener('click', () => switchTab('login'));
