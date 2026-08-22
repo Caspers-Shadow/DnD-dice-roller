@@ -11,7 +11,7 @@ let busy = false;
       '<p class="party-hint">Accounts aren\'t configured yet. See SETUP.md to connect a free Supabase project - until then, this page can\'t sign anyone in.</p>';
     return;
   }
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  const session = await waitForAuthReady();
   if (session) window.location.href = 'dashboard.html';
 })();
 
